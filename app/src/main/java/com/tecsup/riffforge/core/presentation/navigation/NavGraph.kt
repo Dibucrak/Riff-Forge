@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
@@ -19,9 +20,25 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Tuner.route,
+        startDestination = Screen.Login.route,
         modifier = Modifier.padding(paddingValues)
     ) {
+
+        composable(route = Screen.Login.route) {
+            LoginScreen(
+                onNavigateToHome = {
+                    navController.navigate(Screen.Tuner.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
+            )
+        }
+        composable(route = Screen.Register.route) {
+            // RegisterScreen( ... )
+        }
         composable(route = Screen.Tuner.route) {
             TunerScreen()
         }

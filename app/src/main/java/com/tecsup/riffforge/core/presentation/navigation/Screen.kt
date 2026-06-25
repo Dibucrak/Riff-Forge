@@ -1,6 +1,8 @@
 package com.riffforge.core.presentation.navigation
 
 sealed class Screen(val route: String) {
+    object Login : Screen("login_screen")
+    object Register : Screen("register_screen")
     object Tuner : Screen("tuner_screen")
     object Songs : Screen("songs_screen")
     object Tools : Screen("tools_screen")
