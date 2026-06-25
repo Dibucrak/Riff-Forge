@@ -4,4 +4,5 @@ sealed class Screen(val route: String) {
     object Tuner : Screen("tuner_screen")
     object Songs : Screen("songs_screen")
     object Tools : Screen("tools_screen")
+    object AddEditSong : Screen("add_edit_song_screen")
 }

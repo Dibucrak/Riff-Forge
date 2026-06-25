@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
 import com.riffforge.feature_tuner.presentation.TunerScreen
@@ -25,10 +26,21 @@ fun NavGraph(
             TunerScreen()
         }
         composable(route = Screen.Songs.route) {
-            SongsScreen()
+            SongsScreen(
+                onNavigateToAddSong = {
+                    navController.navigate(Screen.AddEditSong.route)
+                }
+            )
         }
         composable(route = Screen.Tools.route) {
             ToolsScreen()
+        }
+        composable(route = Screen.AddEditSong.route) {
+            AddEditSongScreen(
+                onNavigateUp = {
+                    navController.navigateUp()
+                }
+            )
         }
     }
 }

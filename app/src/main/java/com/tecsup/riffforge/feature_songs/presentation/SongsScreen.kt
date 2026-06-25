@@ -29,6 +29,7 @@ import com.riffforge.feature_songs.presentation.components.SongItem
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongsScreen(
+    onNavigateToAddSong: () -> Unit,
     viewModel: SongsViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
@@ -45,9 +46,7 @@ fun SongsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    // TODO: Navegar a la pantalla del Editor de Canciones
-                },
+                onClick = onNavigateToAddSong,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir nueva canción")
