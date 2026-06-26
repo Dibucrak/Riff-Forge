@@ -12,5 +12,6 @@ data class SongEntity(
     val key: String,
     val tuning: String,
     val bpm: Int,
+    val content: String = "",
     val isDraft: Boolean = false
 )
