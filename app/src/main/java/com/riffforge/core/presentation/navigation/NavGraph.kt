@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
+import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
 import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
@@ -52,6 +55,9 @@ fun NavGraph(
             SongsScreen(
                 onNavigateToAddSong = {
                     navController.navigate(Screen.AddEditSong.route)
+                },
+                onNavigateToSetlistDetail = { setId ->
+                    navController.navigate(Screen.SetlistDetail.route + "/$setId")
                 }
             )
         }
@@ -69,6 +75,18 @@ fun NavGraph(
 
         composable(route = Screen.AddEditSong.route) {
             AddEditSongScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(
+            route = Screen.SetlistDetail.route + "/{setId}",
+            arguments = listOf(
+                navArgument(name = "setId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) {
+            SetlistDetailScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(route = Screen.CircleOfFifths.route) {
