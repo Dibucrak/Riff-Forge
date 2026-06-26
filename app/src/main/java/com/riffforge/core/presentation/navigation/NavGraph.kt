@@ -20,6 +20,7 @@ import com.riffforge.feature_profile.presentation.ProfileScreen
 import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
+import com.riffforge.feature_songs.presentation.song_viewer.SongViewerScreen
 import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
 import com.riffforge.feature_tuner.presentation.TunerScreen
@@ -90,6 +91,9 @@ fun NavGraph(
                 },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onNavigateToSongViewer = { songId ->
+                    navController.navigate(Screen.SongViewer.route + "/$songId")
                 }
             )
         }
@@ -105,8 +109,34 @@ fun NavGraph(
             )
         }
 
-        composable(route = Screen.AddEditSong.route) {
+
+        composable(
+            route = Screen.AddEditSong.route + "?songId={songId}",
+            arguments = listOf(
+                navArgument(name = "songId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) {
             AddEditSongScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(
+            route = Screen.SongViewer.route + "/{songId}",
+            arguments = listOf(
+                navArgument(name = "songId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) {
+            SongViewerScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToEdit = { songId ->
+                    navController.navigate(Screen.AddEditSong.route + "?songId=$songId")
+                }
+            )
         }
 
         composable(
@@ -118,7 +148,12 @@ fun NavGraph(
                 }
             )
         ) {
-            SetlistDetailScreen(onNavigateUp = { navController.navigateUp() })
+            SetlistDetailScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToSongViewer = { songId ->
+                    navController.navigate(Screen.SongViewer.route + "/$songId")
+                }
+            )
         }
 
         composable(route = Screen.CircleOfFifths.route) {
