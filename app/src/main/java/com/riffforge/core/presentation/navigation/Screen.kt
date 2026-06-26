@@ -13,4 +13,6 @@ sealed class Screen(val route: String) {
     object Metronome : Screen("metronome_screen")
 
     object SetlistDetail : Screen("setlist_detail_screen")
+
+    object Profile : Screen("profile_screen")
 }
