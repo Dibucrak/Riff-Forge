@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
@@ -36,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +56,7 @@ fun AddEditSongScreen(
     val keyState = viewModel.songKey.value
     val tuningState = viewModel.songTuning.value
     val bpmState = viewModel.songBpm.value
+    val contentState = viewModel.songContent.value
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
@@ -74,7 +77,7 @@ fun AddEditSongScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Añadir Canción", fontWeight = FontWeight.Bold) },
+                title = { Text("Añadir/Editar Canción", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
@@ -184,7 +187,42 @@ fun AddEditSongScreen(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
+                            imeAction = ImeAction.Next
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Letra y Tablatura",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = contentState,
+                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredContent(it)) },
+                        label = { Text("Pega tu tablatura aquí...") },
+                        leadingIcon = { Icon(Icons.Default.LibraryBooks, contentDescription = null) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        singleLine = false,
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Default
                         )
                     )
                 }

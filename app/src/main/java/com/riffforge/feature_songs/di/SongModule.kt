@@ -4,6 +4,7 @@ import com.riffforge.feature_songs.data.local.dao.SongDao
 import com.riffforge.feature_songs.data.repository.SongRepositoryImpl
 import com.riffforge.feature_songs.domain.repository.SongRepository
 import com.riffforge.feature_songs.domain.use_case.AddSongUseCase
+import com.riffforge.feature_songs.domain.use_case.GetSongByIdUseCase
 import com.riffforge.feature_songs.domain.use_case.GetSongsUseCase
 import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import dagger.Module
@@ -27,6 +28,7 @@ object SongModule {
     fun provideSongUseCases(repository: SongRepository): SongUseCases {
         return SongUseCases(
             getSongs = GetSongsUseCase(repository),
+            getSongById = GetSongByIdUseCase(repository),
             addSong = AddSongUseCase(repository)
         )
     }

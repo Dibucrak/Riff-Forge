@@ -5,5 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface SongRepository {
     fun getSongs(): Flow<List<Song>>
+    suspend fun getSongById(id: Int): Song?
     suspend fun insertSong(song: Song)
 }

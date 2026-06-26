@@ -12,6 +12,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE isDraft = 0 ORDER BY title ASC")
     fun getAllSongs(): Flow<List<SongEntity>>
 
+    @Query("SELECT * FROM songs WHERE id = :id")
+    suspend fun getSongById(id: Int): SongEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSong(song: SongEntity)
 }

@@ -7,5 +7,6 @@ data class Song(
     val key: String,
     val tuning: String,
     val bpm: Int,
+    val content: String = "",
     val isDraft: Boolean = false
 )

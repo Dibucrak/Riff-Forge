@@ -15,6 +15,7 @@ fun SongEntity.toDomain(): Song {
         key = key,
         tuning = tuning,
         bpm = bpm,
+        content = content,
         isDraft = isDraft
     )
 }
@@ -27,6 +28,7 @@ fun Song.toEntity(): SongEntity {
         key = key,
         tuning = tuning,
         bpm = bpm,
+        content = content,
         isDraft = isDraft
     )
 }
@@ -39,6 +41,10 @@ class SongRepositoryImpl(
         return dao.getAllSongs().map { entities ->
             entities.map { it.toDomain() }
         }
+    }
+
+    override suspend fun getSongById(id: Int): Song? {
+        return dao.getSongById(id)?.toDomain()
     }
 
     override suspend fun insertSong(song: Song) {
