@@ -34,7 +34,8 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolsScreen(
-    onNavigateToCircleOfFifths: () -> Unit
+    onNavigateToCircleOfFifths: () -> Unit,
+    onNavigateToMetronome: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -62,10 +63,10 @@ fun ToolsScreen(
             )
 
             ToolCardItem(
-                title = "Metrónomo (Próximamente)",
+                title = "Metrónomo",
                 description = "Mantén el tempo perfecto para tus ensayos.",
                 icon = Icons.Default.Timer,
-                onClick = { /* TODO en siguientes etapas */ }
+                onClick = onNavigateToMetronome
             )
 
             ToolCardItem(
