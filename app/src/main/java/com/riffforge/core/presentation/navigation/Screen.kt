@@ -10,4 +10,5 @@ sealed class Screen(val route: String) {
 
     object AddEditSong : Screen("add_edit_song_screen")
     object CircleOfFifths : Screen("circle_of_fifths_screen")
+    object Metronome : Screen("metronome_screen")
 }

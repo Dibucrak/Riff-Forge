@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
+import com.riffforge.feature_metronome.presentation.MetronomeScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
 import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
@@ -59,6 +60,9 @@ fun NavGraph(
             ToolsScreen(
                 onNavigateToCircleOfFifths = {
                     navController.navigate(Screen.CircleOfFifths.route)
+                },
+                onNavigateToMetronome = {
+                    navController.navigate(Screen.Metronome.route)
                 }
             )
         }
@@ -69,6 +73,10 @@ fun NavGraph(
 
         composable(route = Screen.CircleOfFifths.route) {
             CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.Metronome.route) {
+            MetronomeScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }
