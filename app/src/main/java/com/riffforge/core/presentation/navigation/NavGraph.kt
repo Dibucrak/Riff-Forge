@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.riffforge.feature_auth.presentation.login.LoginScreen
+import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
@@ -36,9 +37,15 @@ fun NavGraph(
                 }
             )
         }
+
         composable(route = Screen.Register.route) {
-            // RegisterScreen( ... )
+            RegisterScreen(
+                onNavigateUp = {
+                    navController.navigateUp()
+                }
+            )
         }
+
         composable(route = Screen.Tuner.route) {
             TunerScreen()
         }
