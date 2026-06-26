@@ -11,6 +11,7 @@ import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
+import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
 import com.riffforge.feature_tuner.presentation.TunerScreen
 
@@ -39,16 +40,13 @@ fun NavGraph(
         }
 
         composable(route = Screen.Register.route) {
-            RegisterScreen(
-                onNavigateUp = {
-                    navController.navigateUp()
-                }
-            )
+            RegisterScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(route = Screen.Tuner.route) {
             TunerScreen()
         }
+
         composable(route = Screen.Songs.route) {
             SongsScreen(
                 onNavigateToAddSong = {
@@ -56,15 +54,21 @@ fun NavGraph(
                 }
             )
         }
+
         composable(route = Screen.Tools.route) {
-            ToolsScreen()
-        }
-        composable(route = Screen.AddEditSong.route) {
-            AddEditSongScreen(
-                onNavigateUp = {
-                    navController.navigateUp()
+            ToolsScreen(
+                onNavigateToCircleOfFifths = {
+                    navController.navigate(Screen.CircleOfFifths.route)
                 }
             )
+        }
+
+        composable(route = Screen.AddEditSong.route) {
+            AddEditSongScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.CircleOfFifths.route) {
+            CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }
