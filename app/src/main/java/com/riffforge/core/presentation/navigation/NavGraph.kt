@@ -1,5 +1,9 @@
 package com.riffforge.core.presentation.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -28,7 +32,31 @@ fun NavGraph(
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route,
-        modifier = Modifier.padding(paddingValues)
+        modifier = Modifier.padding(paddingValues),
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        }
     ) {
 
         composable(route = Screen.Login.route) {
@@ -105,7 +133,6 @@ fun NavGraph(
             ProfileScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onSignOutSuccess = {
-                    // Limpia absolutamente todo el historial y vuelve al Login
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
