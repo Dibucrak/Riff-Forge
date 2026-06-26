@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
+import com.riffforge.feature_profile.presentation.ProfileScreen
 import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
 import com.riffforge.feature_song_editor.presentation.AddEditSongScreen
 import com.riffforge.feature_songs.presentation.SongsScreen
@@ -58,6 +59,9 @@ fun NavGraph(
                 },
                 onNavigateToSetlistDetail = { setId ->
                     navController.navigate(Screen.SetlistDetail.route + "/$setId")
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile.route)
                 }
             )
         }
@@ -95,6 +99,18 @@ fun NavGraph(
 
         composable(route = Screen.Metronome.route) {
             MetronomeScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.Profile.route) {
+            ProfileScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onSignOutSuccess = {
+                    // Limpia absolutamente todo el historial y vuelve al Login
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
