@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +52,7 @@ import com.riffforge.feature_songs.presentation.components.SongItem
 @Composable
 fun SetlistDetailScreen(
     onNavigateUp: () -> Unit,
+    onNavigateToSongViewer: (Int) -> Unit,
     viewModel: SetlistDetailViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
@@ -165,7 +167,10 @@ fun SetlistDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(state.setlistDetail.songs) { song ->
-                                SongItem(song = song)
+                                SongItem(
+                                    song = song,
+                                    onClick = { onNavigateToSongViewer(song.id) }
+                                )
                             }
                         }
                     }
