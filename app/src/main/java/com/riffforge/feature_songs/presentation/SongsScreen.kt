@@ -46,6 +46,7 @@ import com.riffforge.feature_songs.presentation.components.SongItem
 @Composable
 fun SongsScreen(
     onNavigateToAddSong: () -> Unit,
+    onNavigateToSetlistDetail: (Int) -> Unit,
     songsViewModel: SongsViewModel = hiltViewModel(),
     setlistsViewModel: SetlistsViewModel = hiltViewModel()
 ) {
@@ -137,7 +138,7 @@ fun SongsScreen(
                             SetlistItem(
                                 setlistDetail = setlistDetail,
                                 onClick = {
-                                    // TODO: Navegar a detalle del setlist
+                                    onNavigateToSetlistDetail(setlistDetail.setlist.id)
                                 }
                             )
                         }
