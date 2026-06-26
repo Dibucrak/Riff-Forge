@@ -1,4 +1,4 @@
-package com.tecsup.riffforge
+package com.riffforge
 
 import org.junit.Test
 
