@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
+import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
 import com.riffforge.feature_profile.presentation.ProfileScreen
 import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
@@ -105,10 +106,12 @@ fun NavGraph(
                 },
                 onNavigateToMetronome = {
                     navController.navigate(Screen.Metronome.route)
+                },
+                onNavigateToChordDictionary = {
+                    navController.navigate(Screen.ChordDictionary.route)
                 }
             )
         }
-
 
         composable(
             route = Screen.AddEditSong.route + "?songId={songId}",
@@ -162,6 +165,10 @@ fun NavGraph(
 
         composable(route = Screen.Metronome.route) {
             MetronomeScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.ChordDictionary.route) {
+            ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(route = Screen.Profile.route) {

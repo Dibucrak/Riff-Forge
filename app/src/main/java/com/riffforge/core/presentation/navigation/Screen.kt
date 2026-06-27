@@ -11,9 +11,9 @@ sealed class Screen(val route: String) {
     object AddEditSong : Screen("add_edit_song_screen")
     object CircleOfFifths : Screen("circle_of_fifths_screen")
     object Metronome : Screen("metronome_screen")
+    object ChordDictionary : Screen("chord_dictionary_screen")
 
     object SetlistDetail : Screen("setlist_detail_screen")
     object Profile : Screen("profile_screen")
-
     object SongViewer : Screen("song_viewer_screen")
 }

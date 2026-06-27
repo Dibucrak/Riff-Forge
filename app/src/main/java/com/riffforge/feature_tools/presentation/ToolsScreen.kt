@@ -35,7 +35,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ToolsScreen(
     onNavigateToCircleOfFifths: () -> Unit,
-    onNavigateToMetronome: () -> Unit
+    onNavigateToMetronome: () -> Unit,
+    onNavigateToChordDictionary: () -> Unit // <---
 ) {
     Scaffold(
         topBar = {
@@ -70,10 +71,10 @@ fun ToolsScreen(
             )
 
             ToolCardItem(
-                title = "Diccionario de Acordes (Próximamente)",
-                description = "Encuentra diagramas para cualquier acorde.",
+                title = "Diccionario de Acordes",
+                description = "Encuentra diagramas interactivos para cualquier acorde.",
                 icon = Icons.Default.LibraryBooks,
-                onClick = { /* TODO en siguientes etapas */ }
+                onClick = onNavigateToChordDictionary
             )
         }
     }
