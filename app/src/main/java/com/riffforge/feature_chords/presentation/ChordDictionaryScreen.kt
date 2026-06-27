@@ -34,11 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.riffforge.feature_chords.domain.model.Chord
 import com.riffforge.feature_chords.domain.util.ChordLibrary
@@ -214,8 +213,8 @@ fun ChordDiagramCanvas(chord: Chord) {
                         "${chord.startingFret}fr",
                         -40f,
                         startY + (fretSpacing / 2) + 15f,
-                        Paint().apply {
-                            color = onSurfaceColor.hashCode()
+                        android.graphics.Paint().apply {
+                            color = onSurfaceColor.toArgb()
                             textSize = 36f
                             isAntiAlias = true
                         }
@@ -226,16 +225,16 @@ fun ChordDiagramCanvas(chord: Chord) {
             chord.frets.forEachIndexed { index, fretVal ->
                 val x = index * stringSpacing
                 drawContext.canvas.nativeCanvas.apply {
-                    val paint = Paint().apply {
+                    val paint = android.graphics.Paint().apply {
                         textSize = 40f
                         isAntiAlias = true
                         textAlign = android.graphics.Paint.Align.CENTER
                     }
                     if (fretVal == -1) {
-                        paint.color = errorColor.hashCode()
+                        paint.color = errorColor.toArgb()
                         drawText("X", x, startY - 20f, paint)
                     } else if (fretVal == 0) {
-                        paint.color = onSurfaceColor.hashCode()
+                        paint.color = onSurfaceColor.toArgb()
                         drawText("O", x, startY - 20f, paint)
                     }
                 }
@@ -262,7 +261,7 @@ fun ChordDiagramCanvas(chord: Chord) {
                                     fingerNum.toString(),
                                     cx,
                                     cy + 12f,
-                                    Paint().apply {
+                                    android.graphics.Paint().apply {
                                         color = android.graphics.Color.WHITE
                                         textSize = 32f
                                         isAntiAlias = true
@@ -305,7 +304,7 @@ fun ChordDiagramCanvas(chord: Chord) {
                             group.first().second.toString(),
                             startX + ((endX - startX) / 2),
                             y + 12f,
-                            Paint().apply {
+                            android.graphics.Paint().apply {
                                 color = android.graphics.Color.WHITE
                                 textSize = 32f
                                 isAntiAlias = true

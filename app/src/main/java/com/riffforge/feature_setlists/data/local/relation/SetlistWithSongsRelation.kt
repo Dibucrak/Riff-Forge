@@ -12,7 +12,11 @@ data class SetlistWithSongsRelation(
     @Relation(
         parentColumn = "setId",
         entityColumn = "id",
-        associateBy = Junction(SetlistSongCrossRef::class)
+        associateBy = Junction(
+            value = SetlistSongCrossRef::class,
+            parentColumn = "setId",
+            entityColumn = "songId"
+        )
     )
     val songs: List<SongEntity>
 )
