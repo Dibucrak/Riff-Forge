@@ -16,15 +16,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -71,7 +75,6 @@ fun SongViewerScreen(
                         animationSpec = tween(durationMillis = 100, easing = LinearEasing)
                     )
                 } else {
-
                     viewModel.onEvent(SongViewerEvent.ToggleAutoScroll)
                     break
                 }
@@ -103,6 +106,13 @@ fun SongViewerScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.onEvent(SongViewerEvent.ToggleFlats) }) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = "Cambiar #/b",
+                            tint = if (state.preferFlats) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     IconButton(onClick = { state.song?.id?.let { onNavigateToEdit(it) } }) {
                         Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar")
                     }
@@ -123,44 +133,87 @@ fun SongViewerScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Row {
-                        IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseTextSize) }) {
-                            Icon(Icons.Default.TextDecrease, contentDescription = "Texto menor")
-                        }
-                        IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseTextSize) }) {
-                            Icon(Icons.Default.TextIncrease, contentDescription = "Texto mayor")
-                        }
-                    }
 
-                    FloatingActionButton(
-                        onClick = { viewModel.onEvent(SongViewerEvent.ToggleAutoScroll) },
-                        containerColor = if (state.isAutoScrolling) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = if (state.isAutoScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = "AutoScroll"
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Tono:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.TransposeDown) }) {
+                                Icon(Icons.Default.Remove, contentDescription = "Bajar Tono", modifier = Modifier.padding(4.dp))
+                            }
+                            Text(
+                                text = if (state.transposeSemitones > 0) "+${state.transposeSemitones}" else "${state.transposeSemitones}",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.TransposeUp) }) {
+                                Icon(Icons.Default.Add, contentDescription = "Subir Tono", modifier = Modifier.padding(4.dp))
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Capo:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.CapoDown) }) {
+                                Icon(Icons.Default.Remove, contentDescription = "Bajar Capo", modifier = Modifier.padding(4.dp))
+                            }
+                            Text(
+                                text = "${state.capo}",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.CapoUp) }) {
+                                Icon(Icons.Default.Add, contentDescription = "Subir Capo", modifier = Modifier.padding(4.dp))
+                            }
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseSpeed) }) {
-                            Icon(Icons.Default.FastRewind, contentDescription = "Más lento")
+                    Divider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row {
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseTextSize) }) {
+                                Icon(Icons.Default.TextDecrease, contentDescription = "Texto menor")
+                            }
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseTextSize) }) {
+                                Icon(Icons.Default.TextIncrease, contentDescription = "Texto mayor")
+                            }
                         }
-                        Text(
-                            text = "${state.scrollSpeed}x",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseSpeed) }) {
-                            Icon(Icons.Default.FastForward, contentDescription = "Más rápido")
+
+                        FloatingActionButton(
+                            onClick = { viewModel.onEvent(SongViewerEvent.ToggleAutoScroll) },
+                            containerColor = if (state.isAutoScrolling) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (state.isAutoScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "AutoScroll"
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseSpeed) }) {
+                                Icon(Icons.Default.FastRewind, contentDescription = "Más lento")
+                            }
+                            Text(
+                                text = "${state.scrollSpeed}x",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseSpeed) }) {
+                                Icon(Icons.Default.FastForward, contentDescription = "Más rápido")
+                            }
                         }
                     }
                 }
@@ -198,7 +251,8 @@ fun SongViewerScreen(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        Text("Tono: ${state.song.key}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val displayKey = ChordTransposer.shiftNote(state.song.key, state.transposeSemitones, state.preferFlats)
+                        Text("Tono: $displayKey", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Afinación: ${state.song.tuning}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Tempo: ${state.song.bpm} BPM", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -206,14 +260,14 @@ fun SongViewerScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = state.song.content.ifBlank { "Sin contenido (Edita la canción para añadir letra y acordes)." },
+                        text = state.displayedContent.ifBlank { "Sin contenido (Edita la canción para añadir letra y acordes)." },
                         fontSize = state.textSizeSp.sp,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onBackground,
                         lineHeight = (state.textSizeSp * 1.5).sp
                     )
 
-                    Spacer(modifier = Modifier.height(120.dp))
+                    Spacer(modifier = Modifier.height(180.dp))
                 }
             }
         }
