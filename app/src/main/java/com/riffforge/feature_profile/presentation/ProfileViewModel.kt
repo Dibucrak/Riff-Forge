@@ -4,11 +4,18 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffforge.core.domain.model.CloudBackupData
+import com.riffforge.core.domain.repository.CloudSyncRepository
 import com.riffforge.feature_auth.domain.use_case.AuthUseCases
+import com.riffforge.feature_setlists.domain.model.SetlistDetail
+import com.riffforge.feature_setlists.domain.use_case.SetlistUseCases
+import com.riffforge.feature_songs.domain.model.Song
+import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -16,7 +23,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authUseCases: AuthUseCases
+    private val authUseCases: AuthUseCases,
+    private val cloudSyncRepository: CloudSyncRepository,
+    private val songUseCases: SongUseCases,
+    private val setlistUseCases: SetlistUseCases
 ) : ViewModel() {
 
     private val _state = mutableStateOf(ProfileState())
@@ -29,6 +39,7 @@ class ProfileViewModel @Inject constructor(
 
     sealed class UiEvent {
         object SignOutSuccess : UiEvent()
+        data class ShowSnackbar(val message: String) : UiEvent()
     }
 
     init {
@@ -43,6 +54,8 @@ class ProfileViewModel @Inject constructor(
                     _eventFlow.emit(UiEvent.SignOutSuccess)
                 }
             }
+            is ProfileEvent.BackupToCloud -> performBackup()
+            is ProfileEvent.RestoreFromCloud -> performRestore()
         }
     }
 
@@ -62,5 +75,67 @@ class ProfileViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun performBackup() {
+        viewModelScope.launch {
+            val uid = state.value.uid
+            if (uid.isBlank()) return@launch
+
+            _state.value = state.value.copy(isSyncing = true)
+
+            try {
+                val currentSongs = songUseCases.getSongs().first()
+                val currentSetlists = setlistUseCases.getSetlists().first()
+
+                val backupData = CloudBackupData(songs = currentSongs, setlists = currentSetlists)
+
+                val result = cloudSyncRepository.backupCatalog(uid, backupData)
+
+                result.onSuccess {
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio respaldado exitosamente en la nube."))
+                }.onFailure {
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Error al respaldar: ${it.message}"))
+                }
+            } catch (e: Exception) {
+                _eventFlow.emit(UiEvent.ShowSnackbar("Ocurrió un error inesperado."))
+            } finally {
+                _state.value = state.value.copy(isSyncing = false)
+            }
+        }
+    }
+
+    private fun performRestore() {
+        viewModelScope.launch {
+            val uid = state.value.uid
+            if (uid.isBlank()) return@launch
+
+            _state.value = state.value.copy(isSyncing = true)
+
+            try {
+                val result = cloudSyncRepository.restoreCatalog(uid)
+
+                result.onSuccess { data ->
+                    data.songs.forEach { song ->
+                        songUseCases.addSong(song)
+                    }
+
+                    data.setlists.forEach { detail ->
+                        val setId = setlistUseCases.addSetlist(detail.setlist)
+                        detail.songs.forEach { song ->
+                            setlistUseCases.addSongToSetlist(setId.toInt(), song.id)
+                        }
+                    }
+
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio restaurado desde la nube."))
+                }.onFailure {
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Error al restaurar: ${it.message}"))
+                }
+            } catch (e: Exception) {
+                _eventFlow.emit(UiEvent.ShowSnackbar("Ocurrió un error en la sincronización."))
+            } finally {
+                _state.value = state.value.copy(isSyncing = false)
+            }
+        }
     }
 }

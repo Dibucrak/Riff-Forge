@@ -4,5 +4,6 @@ data class ProfileState(
     val email: String = "",
     val displayName: String = "",
     val uid: String = "",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isSyncing: Boolean = false
 )
