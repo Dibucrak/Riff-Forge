@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "463754005238",
+    "project_id": "riff-forge-722ca",
+    "storage_bucket": "riff-forge-722ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463754005238:android:41fb5f4b11889e7b4c7ad7",
+        "android_client_info": {
+          "package_name": "com.riffforge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv1YFPjDEvk2uWdSFSnArK1e65eCZo4u0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
