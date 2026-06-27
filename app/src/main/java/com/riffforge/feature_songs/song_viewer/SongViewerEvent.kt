@@ -6,4 +6,10 @@ sealed class SongViewerEvent {
     object DecreaseSpeed : SongViewerEvent()
     object IncreaseTextSize : SongViewerEvent()
     object DecreaseTextSize : SongViewerEvent()
+
+    object TransposeUp : SongViewerEvent()
+    object TransposeDown : SongViewerEvent()
+    object CapoUp : SongViewerEvent()
+    object CapoDown : SongViewerEvent()
+    object ToggleFlats : SongViewerEvent()
 }
