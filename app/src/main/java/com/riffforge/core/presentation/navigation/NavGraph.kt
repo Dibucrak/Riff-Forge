@@ -18,6 +18,7 @@ import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
 import com.riffforge.feature_contributions.presentation.community_explorer.CommunityScreen
+import com.riffforge.feature_ear_training.presentation.EarTrainingScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
 import com.riffforge.feature_profile.presentation.ProfileScreen
 import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
@@ -114,6 +115,9 @@ fun NavGraph(
                 },
                 onNavigateToCommunity = {
                     navController.navigate(Screen.CommunityExplorer.route)
+                },
+                onNavigateToEarTraining = {
+                    navController.navigate(Screen.EarTraining.route)
                 }
             )
         }
@@ -182,6 +186,10 @@ fun NavGraph(
 
         composable(route = Screen.AdminPanel.route) {
             AdminScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.EarTraining.route) {
+            EarTrainingScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(route = Screen.Profile.route) {

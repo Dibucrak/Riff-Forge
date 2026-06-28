@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Architecture
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Timer
@@ -38,7 +39,8 @@ fun ToolsScreen(
     onNavigateToCircleOfFifths: () -> Unit,
     onNavigateToMetronome: () -> Unit,
     onNavigateToChordDictionary: () -> Unit,
-    onNavigateToCommunity: () -> Unit
+    onNavigateToCommunity: () -> Unit,
+    onNavigateToEarTraining: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -63,6 +65,13 @@ fun ToolsScreen(
                 description = "Descarga tablaturas y riffs de otros guitarristas.",
                 icon = Icons.Default.Public,
                 onClick = onNavigateToCommunity
+            )
+
+            ToolCardItem(
+                title = "Entrenador de Oído",
+                description = "Afina tu percepción de intervalos, acordes y progresiones.",
+                icon = Icons.Default.Headphones,
+                onClick = onNavigateToEarTraining
             )
 
             ToolCardItem(
