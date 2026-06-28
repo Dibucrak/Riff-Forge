@@ -5,17 +5,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffforge.feature_auth.domain.use_case.AuthUseCases
+import com.riffforge.feature_contributions.domain.model.Contribution
+import com.riffforge.feature_contributions.domain.repository.CommunityRepository
 import com.riffforge.feature_songs.domain.model.Song
 import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AddEditSongViewModel @Inject constructor(
     private val songUseCases: SongUseCases,
+    private val authUseCases: AuthUseCases,
+    private val communityRepository: CommunityRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -77,7 +83,6 @@ class AddEditSongViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val bpmInt = _songBpm.value.toIntOrNull() ?: 120
-
                         songUseCases.addSong(
                             Song(
                                 id = currentSongId ?: 0,
@@ -92,11 +97,44 @@ class AddEditSongViewModel @Inject constructor(
                         )
                         _eventFlow.emit(UiEvent.SaveSong)
                     } catch (e: Exception) {
-                        _eventFlow.emit(
-                            UiEvent.ShowSnackbar(
-                                message = e.message ?: "Error desconocido al guardar"
+                        _eventFlow.emit(UiEvent.ShowSnackbar(e.message ?: "Error desconocido"))
+                    }
+                }
+            }
+            is AddEditSongEvent.PublishToCommunity -> {
+                viewModelScope.launch {
+                    if (_songTitle.value.isBlank() || _songContent.value.isBlank()) {
+                        _eventFlow.emit(UiEvent.ShowSnackbar("El título y el contenido son obligatorios para publicar."))
+                        return@launch
+                    }
+
+                    try {
+                        val user = authUseCases.getCurrentUser().first()
+                        if (user != null) {
+                            val bpmInt = _songBpm.value.toIntOrNull() ?: 120
+                            val contribution = Contribution(
+                                title = _songTitle.value,
+                                artist = _songArtist.value,
+                                key = _songKey.value,
+                                tuning = _songTuning.value,
+                                bpm = bpmInt,
+                                content = _songContent.value,
+                                authorId = user.uid,
+                                authorName = user.displayName ?: "Guitarrista Anónimo",
+                                isApproved = true
                             )
-                        )
+
+                            val result = communityRepository.publishContribution(contribution)
+                            if (result.isSuccess) {
+                                _eventFlow.emit(UiEvent.ShowSnackbar("¡Aporte enviado a la comunidad!"))
+                            } else {
+                                _eventFlow.emit(UiEvent.ShowSnackbar("Error al enviar aporte."))
+                            }
+                        } else {
+                            _eventFlow.emit(UiEvent.ShowSnackbar("Debes iniciar sesión para compartir."))
+                        }
+                    } catch (e: Exception) {
+                        _eventFlow.emit(UiEvent.ShowSnackbar(e.message ?: "Error de conexión."))
                     }
                 }
             }
