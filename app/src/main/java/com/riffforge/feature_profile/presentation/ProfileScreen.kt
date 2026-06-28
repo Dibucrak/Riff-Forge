@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ProfileScreen(
     onNavigateUp: () -> Unit,
+    onNavigateToAdminPanel: () -> Unit,
     onSignOutSuccess: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -139,7 +141,20 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = onNavigateToAdminPanel,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                    ) {
+                        Icon(imageVector = Icons.Default.AdminPanelSettings, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Acceder al Panel de Administración")
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
