@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.riffforge.feature_admin.presentation.AdminScreen
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
@@ -179,9 +180,14 @@ fun NavGraph(
             CommunityScreen(onNavigateUp = { navController.navigateUp() })
         }
 
+        composable(route = Screen.AdminPanel.route) {
+            AdminScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
         composable(route = Screen.Profile.route) {
             ProfileScreen(
                 onNavigateUp = { navController.navigateUp() },
+                onNavigateToAdminPanel = { navController.navigate(Screen.AdminPanel.route) },
                 onSignOutSuccess = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
