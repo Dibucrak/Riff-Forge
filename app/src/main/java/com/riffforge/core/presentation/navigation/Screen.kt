@@ -15,6 +15,7 @@ sealed class Screen(val route: String) {
     object CommunityExplorer : Screen("community_explorer_screen")
     object AdminPanel : Screen("admin_panel_screen")
     object EarTraining : Screen("ear_training_screen")
+    object DailyLearning : Screen("daily_learning_screen")
 
     object SetlistDetail : Screen("setlist_detail_screen")
     object Profile : Screen("profile_screen")
