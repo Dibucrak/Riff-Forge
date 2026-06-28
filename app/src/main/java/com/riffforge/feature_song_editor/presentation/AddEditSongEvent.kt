@@ -8,4 +8,5 @@ sealed class AddEditSongEvent {
     data class EnteredBpm(val value: String) : AddEditSongEvent()
     data class EnteredContent(val value: String) : AddEditSongEvent()
     object SaveSong : AddEditSongEvent()
+    object PublishToCommunity : AddEditSongEvent()
 }

@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
+import com.riffforge.feature_contributions.presentation.community_explorer.CommunityScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
 import com.riffforge.feature_profile.presentation.ProfileScreen
 import com.riffforge.feature_setlists.presentation.setlist_detail.SetlistDetailScreen
@@ -109,6 +110,9 @@ fun NavGraph(
                 },
                 onNavigateToChordDictionary = {
                     navController.navigate(Screen.ChordDictionary.route)
+                },
+                onNavigateToCommunity = {
+                    navController.navigate(Screen.CommunityExplorer.route)
                 }
             )
         }
@@ -169,6 +173,10 @@ fun NavGraph(
 
         composable(route = Screen.ChordDictionary.route) {
             ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.CommunityExplorer.route) {
+            CommunityScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(route = Screen.Profile.route) {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,12 +37,13 @@ import androidx.compose.ui.unit.dp
 fun ToolsScreen(
     onNavigateToCircleOfFifths: () -> Unit,
     onNavigateToMetronome: () -> Unit,
-    onNavigateToChordDictionary: () -> Unit // <---
+    onNavigateToChordDictionary: () -> Unit,
+    onNavigateToCommunity: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Herramientas y Teoría") },
+                title = { Text("Herramientas y Comunidad") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -56,6 +58,13 @@ fun ToolsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            ToolCardItem(
+                title = "Explorar Comunidad",
+                description = "Descarga tablaturas y riffs de otros guitarristas.",
+                icon = Icons.Default.Public,
+                onClick = onNavigateToCommunity
+            )
+
             ToolCardItem(
                 title = "Círculo de Quintas",
                 description = "Explora tonalidades, escalas relativas y progresiones.",

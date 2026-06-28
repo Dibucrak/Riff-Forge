@@ -12,6 +12,7 @@ sealed class Screen(val route: String) {
     object CircleOfFifths : Screen("circle_of_fifths_screen")
     object Metronome : Screen("metronome_screen")
     object ChordDictionary : Screen("chord_dictionary_screen")
+    object CommunityExplorer : Screen("community_explorer_screen")
 
     object SetlistDetail : Screen("setlist_detail_screen")
     object Profile : Screen("profile_screen")
