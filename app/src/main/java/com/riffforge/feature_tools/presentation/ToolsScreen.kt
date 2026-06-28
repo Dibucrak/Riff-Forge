@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
@@ -40,7 +41,8 @@ fun ToolsScreen(
     onNavigateToMetronome: () -> Unit,
     onNavigateToChordDictionary: () -> Unit,
     onNavigateToCommunity: () -> Unit,
-    onNavigateToEarTraining: () -> Unit
+    onNavigateToEarTraining: () -> Unit,
+    onNavigateToDailyLearning: () -> Unit 
 ) {
     Scaffold(
         topBar = {
@@ -61,6 +63,13 @@ fun ToolsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ToolCardItem(
+                title = "Aprendizaje Diario",
+                description = "Descubre el acorde del día y completa tus retos.",
+                icon = Icons.Default.Lightbulb,
+                onClick = onNavigateToDailyLearning
+            )
+
+            ToolCardItem(
                 title = "Explorar Comunidad",
                 description = "Descarga tablaturas y riffs de otros guitarristas.",
                 icon = Icons.Default.Public,
@@ -69,14 +78,14 @@ fun ToolsScreen(
 
             ToolCardItem(
                 title = "Entrenador de Oído",
-                description = "Afina tu percepción de intervalos, acordes y progresiones.",
+                description = "Afina tu percepción de intervalos y acordes.",
                 icon = Icons.Default.Headphones,
                 onClick = onNavigateToEarTraining
             )
 
             ToolCardItem(
                 title = "Círculo de Quintas",
-                description = "Explora tonalidades, escalas relativas y progresiones.",
+                description = "Explora tonalidades y progresiones.",
                 icon = Icons.Default.Architecture,
                 onClick = onNavigateToCircleOfFifths
             )
@@ -90,7 +99,7 @@ fun ToolsScreen(
 
             ToolCardItem(
                 title = "Diccionario de Acordes",
-                description = "Encuentra diagramas interactivos para cualquier acorde.",
+                description = "Encuentra diagramas interactivos.",
                 icon = Icons.Default.LibraryBooks,
                 onClick = onNavigateToChordDictionary
             )

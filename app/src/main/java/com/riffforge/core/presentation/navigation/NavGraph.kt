@@ -104,21 +104,20 @@ fun NavGraph(
 
         composable(route = Screen.Tools.route) {
             ToolsScreen(
-                onNavigateToCircleOfFifths = {
-                    navController.navigate(Screen.CircleOfFifths.route)
-                },
-                onNavigateToMetronome = {
-                    navController.navigate(Screen.Metronome.route)
-                },
-                onNavigateToChordDictionary = {
-                    navController.navigate(Screen.ChordDictionary.route)
-                },
-                onNavigateToCommunity = {
-                    navController.navigate(Screen.CommunityExplorer.route)
-                },
-                onNavigateToEarTraining = {
-                    navController.navigate(Screen.EarTraining.route)
-                }
+                onNavigateToCircleOfFifths = { navController.navigate(Screen.CircleOfFifths.route) },
+                onNavigateToMetronome = { navController.navigate(Screen.Metronome.route) },
+                onNavigateToChordDictionary = { navController.navigate(Screen.ChordDictionary.route) },
+                onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) },
+                onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) } // Conexión
+            )
+        }
+
+
+        composable(route = Screen.DailyLearning.route) {
+            DailyLearningScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) } // Acceso cruzado
             )
         }
 
@@ -190,6 +189,13 @@ fun NavGraph(
 
         composable(route = Screen.EarTraining.route) {
             EarTrainingScreen(onNavigateUp = { navController.navigateUp() })
+        }
+
+        composable(route = Screen.DailyLearning.route) {
+            DailyLearningScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) } // Acceso cruzado
+            )
         }
 
         composable(route = Screen.Profile.route) {
