@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.riffforge.core.domain.model.CloudBackupData
 import com.riffforge.core.domain.repository.CloudSyncRepository
 import com.riffforge.feature_auth.domain.use_case.AuthUseCases
+import com.riffforge.feature_notifications.domain.manager.ReminderManager
 import com.riffforge.feature_setlists.domain.model.SetlistDetail
 import com.riffforge.feature_setlists.domain.use_case.SetlistUseCases
-import com.riffforge.feature_songs.domain.model.Song
 import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -26,7 +26,8 @@ class ProfileViewModel @Inject constructor(
     private val authUseCases: AuthUseCases,
     private val cloudSyncRepository: CloudSyncRepository,
     private val songUseCases: SongUseCases,
-    private val setlistUseCases: SetlistUseCases
+    private val setlistUseCases: SetlistUseCases,
+    private val reminderManager: ReminderManager
 ) : ViewModel() {
 
     private val _state = mutableStateOf(ProfileState())
@@ -36,6 +37,8 @@ class ProfileViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     private var getUserJob: Job? = null
+
+    var isReminderActive = mutableStateOf(false)
 
     sealed class UiEvent {
         object SignOutSuccess : UiEvent()
@@ -56,6 +59,16 @@ class ProfileViewModel @Inject constructor(
             }
             is ProfileEvent.BackupToCloud -> performBackup()
             is ProfileEvent.RestoreFromCloud -> performRestore()
+            is ProfileEvent.ToggleReminder -> {
+                isReminderActive.value = event.isEnabled
+                if (event.isEnabled) {
+                    reminderManager.scheduleDailyReminder()
+                    viewModelScope.launch { _eventFlow.emit(UiEvent.ShowSnackbar("Recordatorio diario activado.")) }
+                } else {
+                    reminderManager.cancelReminder()
+                    viewModelScope.launch { _eventFlow.emit(UiEvent.ShowSnackbar("Recordatorios desactivados.")) }
+                }
+            }
         }
     }
 
@@ -81,24 +94,19 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val uid = state.value.uid
             if (uid.isBlank()) return@launch
-
             _state.value = state.value.copy(isSyncing = true)
-
             try {
                 val currentSongs = songUseCases.getSongs().first()
                 val currentSetlists = setlistUseCases.getSetlists().first()
-
                 val backupData = CloudBackupData(songs = currentSongs, setlists = currentSetlists)
-
                 val result = cloudSyncRepository.backupCatalog(uid, backupData)
-
                 result.onSuccess {
-                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio respaldado exitosamente en la nube."))
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio respaldado exitosamente."))
                 }.onFailure {
                     _eventFlow.emit(UiEvent.ShowSnackbar("Error al respaldar: ${it.message}"))
                 }
             } catch (e: Exception) {
-                _eventFlow.emit(UiEvent.ShowSnackbar("Ocurrió un error inesperado."))
+                _eventFlow.emit(UiEvent.ShowSnackbar("Error inesperado."))
             } finally {
                 _state.value = state.value.copy(isSyncing = false)
             }
@@ -109,30 +117,21 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val uid = state.value.uid
             if (uid.isBlank()) return@launch
-
             _state.value = state.value.copy(isSyncing = true)
-
             try {
                 val result = cloudSyncRepository.restoreCatalog(uid)
-
                 result.onSuccess { data ->
-                    data.songs.forEach { song ->
-                        songUseCases.addSong(song)
-                    }
-
+                    data.songs.forEach { songUseCases.addSong(it) }
                     data.setlists.forEach { detail ->
                         val setId = setlistUseCases.addSetlist(detail.setlist)
-                        detail.songs.forEach { song ->
-                            setlistUseCases.addSongToSetlist(setId.toInt(), song.id)
-                        }
+                        detail.songs.forEach { song -> setlistUseCases.addSongToSetlist(setId.toInt(), song.id) }
                     }
-
-                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio restaurado desde la nube."))
+                    _eventFlow.emit(UiEvent.ShowSnackbar("Repertorio restaurado."))
                 }.onFailure {
                     _eventFlow.emit(UiEvent.ShowSnackbar("Error al restaurar: ${it.message}"))
                 }
             } catch (e: Exception) {
-                _eventFlow.emit(UiEvent.ShowSnackbar("Ocurrió un error en la sincronización."))
+                _eventFlow.emit(UiEvent.ShowSnackbar("Error en sincronización."))
             } finally {
                 _state.value = state.value.copy(isSyncing = false)
             }
