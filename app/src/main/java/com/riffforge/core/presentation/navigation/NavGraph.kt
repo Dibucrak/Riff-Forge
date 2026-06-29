@@ -28,6 +28,8 @@ import com.riffforge.feature_songs.presentation.song_viewer.SongViewerScreen
 import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
 import com.riffforge.feature_tuner.presentation.TunerScreen
+import com.riffforge.feature_daily_learning.presentation.DailyLearningScreen
+import com.riffforge.feature_theory.presentation.progressions.ProgressionScreen
 
 @Composable
 fun NavGraph(
@@ -109,15 +111,15 @@ fun NavGraph(
                 onNavigateToChordDictionary = { navController.navigate(Screen.ChordDictionary.route) },
                 onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
                 onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) },
-                onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) } // Conexión
+                onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) },
+                onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) }
             )
         }
-
 
         composable(route = Screen.DailyLearning.route) {
             DailyLearningScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) } // Acceso cruzado
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) }
             )
         }
 
@@ -191,10 +193,9 @@ fun NavGraph(
             EarTrainingScreen(onNavigateUp = { navController.navigateUp() })
         }
 
-        composable(route = Screen.DailyLearning.route) {
-            DailyLearningScreen(
-                onNavigateUp = { navController.navigateUp() },
-                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) } // Acceso cruzado
+        composable(route = Screen.Progressions.route) {
+            ProgressionScreen(
+                onNavigateUp = { navController.navigateUp() }
             )
         }
 

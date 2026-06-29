@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MusicVideo
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
@@ -42,7 +43,8 @@ fun ToolsScreen(
     onNavigateToChordDictionary: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onNavigateToEarTraining: () -> Unit,
-    onNavigateToDailyLearning: () -> Unit 
+    onNavigateToDailyLearning: () -> Unit,
+    onNavigateToProgressions: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -74,6 +76,13 @@ fun ToolsScreen(
                 description = "Descarga tablaturas y riffs de otros guitarristas.",
                 icon = Icons.Default.Public,
                 onClick = onNavigateToCommunity
+            )
+
+            ToolCardItem(
+                title = "Generador de Progresiones",
+                description = "Encuentra inspiración armónica para tu próximo tema.",
+                icon = Icons.Default.MusicVideo,
+                onClick = onNavigateToProgressions
             )
 
             ToolCardItem(
