@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.riffforge.feature_admin.presentation.AdminScreen
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
@@ -28,8 +29,6 @@ import com.riffforge.feature_songs.presentation.song_viewer.SongViewerScreen
 import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
 import com.riffforge.feature_tools.presentation.ToolsScreen
 import com.riffforge.feature_tuner.presentation.TunerScreen
-import com.riffforge.feature_daily_learning.presentation.DailyLearningScreen
-import com.riffforge.feature_theory.presentation.progressions.ProgressionScreen
 
 @Composable
 fun NavGraph(
@@ -65,7 +64,7 @@ fun NavGraph(
             ) + fadeOut(animationSpec = tween(300))
         }
     ) {
-
+        
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onNavigateToHome = {
@@ -78,32 +77,30 @@ fun NavGraph(
                 }
             )
         }
-
+        
         composable(route = Screen.Register.route) {
             RegisterScreen(onNavigateUp = { navController.navigateUp() })
         }
 
-        composable(route = Screen.Tuner.route) {
+        // --- RUTA CON DEEP LINK PARA EL WIDGET ---
+        composable(
+            route = Screen.Tuner.route,
+            deepLinks = listOf(navDeepLink { uriPattern = "riffforge://tuner" })
+        ) {
             TunerScreen()
         }
-
+        
         composable(route = Screen.Songs.route) {
             SongsScreen(
-                onNavigateToAddSong = {
-                    navController.navigate(Screen.AddEditSong.route)
-                },
-                onNavigateToSetlistDetail = { setId ->
-                    navController.navigate(Screen.SetlistDetail.route + "/$setId")
-                },
-                onNavigateToProfile = {
-                    navController.navigate(Screen.Profile.route)
-                },
+                onNavigateToAddSong = { navController.navigate(Screen.AddEditSong.route) },
+                onNavigateToSetlistDetail = { setId -> navController.navigate(Screen.SetlistDetail.route + "/$setId") },
+                onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                 onNavigateToSongViewer = { songId, setId -> 
                     navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId") 
                 }
             )
         }
-
+        
         composable(route = Screen.Tools.route) {
             ToolsScreen(
                 onNavigateToCircleOfFifths = { navController.navigate(Screen.CircleOfFifths.route) },
@@ -116,26 +113,16 @@ fun NavGraph(
                 onNavigateToScales = { navController.navigate(Screen.Scales.route) }
             )
         }
-
-        composable(route = Screen.DailyLearning.route) {
-            DailyLearningScreen(
-                onNavigateUp = { navController.navigateUp() },
-                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) }
-            )
-        }
-
+        
         composable(
             route = Screen.AddEditSong.route + "?songId={songId}",
             arguments = listOf(
-                navArgument(name = "songId") {
-                    type = NavType.IntType
-                    defaultValue = -1
-                }
+                navArgument(name = "songId") { type = NavType.IntType; defaultValue = -1 }
             )
         ) {
             AddEditSongScreen(onNavigateUp = { navController.navigateUp() })
         }
-
+        
         composable(
             route = Screen.SongViewer.route + "/{songId}?setId={setId}",
             arguments = listOf(
@@ -155,40 +142,37 @@ fun NavGraph(
                 }
             )
         }
-
+        
         composable(
             route = Screen.SetlistDetail.route + "/{setId}",
             arguments = listOf(
-                navArgument(name = "setId") {
-                    type = NavType.IntType
-                    defaultValue = -1
-                }
+                navArgument(name = "setId") { type = NavType.IntType; defaultValue = -1 }
             )
         ) {
             SetlistDetailScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToSongViewer = { songId, setId -> 
-                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId")
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId") 
                 }
             )
         }
-
+        
         composable(route = Screen.CircleOfFifths.route) {
             CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() })
         }
-
+        
         composable(route = Screen.Metronome.route) {
             MetronomeScreen(onNavigateUp = { navController.navigateUp() })
         }
-
+        
         composable(route = Screen.ChordDictionary.route) {
             ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() })
         }
-
+        
         composable(route = Screen.CommunityExplorer.route) {
             CommunityScreen(onNavigateUp = { navController.navigateUp() })
         }
-
+        
         composable(route = Screen.AdminPanel.route) {
             AdminScreen(onNavigateUp = { navController.navigateUp() })
         }
@@ -197,8 +181,18 @@ fun NavGraph(
             EarTrainingScreen(onNavigateUp = { navController.navigateUp() })
         }
 
+        composable(
+            route = Screen.DailyLearning.route,
+            deepLinks = listOf(navDeepLink { uriPattern = "riffforge://daily" })
+        ) {
+            com.riffforge.feature_daily_learning.presentation.DailyLearningScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) }
+            )
+        }
+
         composable(route = Screen.Progressions.route) {
-            ProgressionScreen(
+            com.riffforge.feature_theory.presentation.progressions.ProgressionScreen(
                 onNavigateUp = { navController.navigateUp() }
             )
         }
