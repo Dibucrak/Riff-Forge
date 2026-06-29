@@ -33,11 +33,12 @@ import com.riffforge.feature_tuner.presentation.TunerScreen
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    startDestination: String = Screen.Login.route
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = startDestination,
         modifier = Modifier.padding(paddingValues),
         enterTransition = {
             slideIntoContainer(
@@ -64,7 +65,7 @@ fun NavGraph(
             ) + fadeOut(animationSpec = tween(300))
         }
     ) {
-        
+
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onNavigateToHome = {
@@ -77,30 +78,29 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable(route = Screen.Register.route) {
             RegisterScreen(onNavigateUp = { navController.navigateUp() })
         }
 
-        // --- RUTA CON DEEP LINK PARA EL WIDGET ---
         composable(
             route = Screen.Tuner.route,
             deepLinks = listOf(navDeepLink { uriPattern = "riffforge://tuner" })
         ) {
             TunerScreen()
         }
-        
+
         composable(route = Screen.Songs.route) {
             SongsScreen(
                 onNavigateToAddSong = { navController.navigate(Screen.AddEditSong.route) },
                 onNavigateToSetlistDetail = { setId -> navController.navigate(Screen.SetlistDetail.route + "/$setId") },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
-                onNavigateToSongViewer = { songId, setId -> 
-                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId") 
+                onNavigateToSongViewer = { songId, setId ->
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId")
                 }
             )
         }
-        
+
         composable(route = Screen.Tools.route) {
             ToolsScreen(
                 onNavigateToCircleOfFifths = { navController.navigate(Screen.CircleOfFifths.route) },
@@ -113,7 +113,7 @@ fun NavGraph(
                 onNavigateToScales = { navController.navigate(Screen.Scales.route) }
             )
         }
-        
+
         composable(
             route = Screen.AddEditSong.route + "?songId={songId}",
             arguments = listOf(
@@ -122,7 +122,7 @@ fun NavGraph(
         ) {
             AddEditSongScreen(onNavigateUp = { navController.navigateUp() })
         }
-        
+
         composable(
             route = Screen.SongViewer.route + "/{songId}?setId={setId}",
             arguments = listOf(
@@ -142,7 +142,7 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable(
             route = Screen.SetlistDetail.route + "/{setId}",
             arguments = listOf(
@@ -151,28 +151,28 @@ fun NavGraph(
         ) {
             SetlistDetailScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToSongViewer = { songId, setId -> 
-                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId") 
+                onNavigateToSongViewer = { songId, setId ->
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId")
                 }
             )
         }
-        
+
         composable(route = Screen.CircleOfFifths.route) {
             CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() })
         }
-        
+
         composable(route = Screen.Metronome.route) {
             MetronomeScreen(onNavigateUp = { navController.navigateUp() })
         }
-        
+
         composable(route = Screen.ChordDictionary.route) {
             ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() })
         }
-        
+
         composable(route = Screen.CommunityExplorer.route) {
             CommunityScreen(onNavigateUp = { navController.navigateUp() })
         }
-        
+
         composable(route = Screen.AdminPanel.route) {
             AdminScreen(onNavigateUp = { navController.navigateUp() })
         }

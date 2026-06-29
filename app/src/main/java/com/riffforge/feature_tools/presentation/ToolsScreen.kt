@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Headphones
@@ -48,10 +50,12 @@ fun ToolsScreen(
     onNavigateToProgressions: () -> Unit,
     onNavigateToScales: () -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Herramientas y Comunidad") },
+                title = { Text("Herramientas y Teoría") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -63,56 +67,15 @@ fun ToolsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ToolCardItem(
                 title = "Constructor de Escalas",
-                description = "Visualiza patrones y modos en todo el diapasón.",
+                description = "Visualiza patrones y modos en el diapasón.",
                 icon = Icons.Default.LinearScale,
                 onClick = onNavigateToScales
-            )
-
-            ToolCardItem(
-                title = "Aprendizaje Diario",
-                description = "Descubre el acorde del día y completa tus retos.",
-                icon = Icons.Default.Lightbulb,
-                onClick = onNavigateToDailyLearning
-            )
-
-            ToolCardItem(
-                title = "Explorar Comunidad",
-                description = "Descarga tablaturas y riffs de otros guitarristas.",
-                icon = Icons.Default.Public,
-                onClick = onNavigateToCommunity
-            )
-
-            ToolCardItem(
-                title = "Generador de Progresiones",
-                description = "Encuentra inspiración armónica para tu próximo tema.",
-                icon = Icons.Default.MusicVideo,
-                onClick = onNavigateToProgressions
-            )
-
-            ToolCardItem(
-                title = "Entrenador de Oído",
-                description = "Afina tu percepción de intervalos y acordes.",
-                icon = Icons.Default.Headphones,
-                onClick = onNavigateToEarTraining
-            )
-
-            ToolCardItem(
-                title = "Círculo de Quintas",
-                description = "Explora tonalidades y progresiones.",
-                icon = Icons.Default.Architecture,
-                onClick = onNavigateToCircleOfFifths
-            )
-
-            ToolCardItem(
-                title = "Metrónomo",
-                description = "Mantén el tempo perfecto para tus ensayos.",
-                icon = Icons.Default.Timer,
-                onClick = onNavigateToMetronome
             )
 
             ToolCardItem(
@@ -121,50 +84,72 @@ fun ToolsScreen(
                 icon = Icons.Default.LibraryBooks,
                 onClick = onNavigateToChordDictionary
             )
+
+            ToolCardItem(
+                title = "Aprendizaje Diario",
+                description = "Descubre el acorde del día y retos.",
+                icon = Icons.Default.Lightbulb,
+                onClick = onNavigateToDailyLearning
+            )
+
+            ToolCardItem(
+                title = "Explorar Comunidad",
+                description = "Descarga tablaturas de otros.",
+                icon = Icons.Default.Public,
+                onClick = onNavigateToCommunity
+            )
+
+            ToolCardItem(
+                title = "Generador de Progresiones",
+                description = "Encuentra inspiración armónica.",
+                icon = Icons.Default.MusicVideo,
+                onClick = onNavigateToProgressions
+            )
+
+            ToolCardItem(
+                title = "Entrenador de Oído",
+                description = "Afina tu percepción de intervalos.",
+                icon = Icons.Default.Headphones,
+                onClick = onNavigateToEarTraining
+            )
+
+            ToolCardItem(
+                title = "Círculo de Quintas",
+                description = "Explora tonalidades relativas.",
+                icon = Icons.Default.Architecture,
+                onClick = onNavigateToCircleOfFifths
+            )
+
+            ToolCardItem(
+                title = "Metrónomo",
+                description = "Mantén el tempo perfecto.",
+                icon = Icons.Default.Timer,
+                onClick = onNavigateToMetronome
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-fun ToolCardItem(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
+fun ToolCardItem(title: String, description: String, icon: ImageVector, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Text(text = title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
