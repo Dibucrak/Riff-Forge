@@ -98,8 +98,8 @@ fun NavGraph(
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
                 },
-                onNavigateToSongViewer = { songId ->
-                    navController.navigate(Screen.SongViewer.route + "/$songId")
+                onNavigateToSongViewer = { songId, setId -> 
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId") 
                 }
             )
         }
@@ -137,18 +137,21 @@ fun NavGraph(
         }
 
         composable(
-            route = Screen.SongViewer.route + "/{songId}",
+            route = Screen.SongViewer.route + "/{songId}?setId={setId}",
             arguments = listOf(
-                navArgument(name = "songId") {
-                    type = NavType.IntType
-                    defaultValue = -1
-                }
+                navArgument(name = "songId") { type = NavType.IntType; defaultValue = -1 },
+                navArgument(name = "setId") { type = NavType.IntType; defaultValue = -1 }
             )
         ) {
             SongViewerScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToEdit = { songId ->
                     navController.navigate(Screen.AddEditSong.route + "?songId=$songId")
+                },
+                onNavigateToSong = { nextSongId, currentSetId ->
+                    navController.navigate(Screen.SongViewer.route + "/$nextSongId?setId=$currentSetId") {
+                        popUpTo(Screen.SongViewer.route + "/{songId}?setId={setId}") { inclusive = true }
+                    }
                 }
             )
         }
@@ -164,8 +167,8 @@ fun NavGraph(
         ) {
             SetlistDetailScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToSongViewer = { songId ->
-                    navController.navigate(Screen.SongViewer.route + "/$songId")
+                onNavigateToSongViewer = { songId, setId -> 
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId")
                 }
             )
         }
