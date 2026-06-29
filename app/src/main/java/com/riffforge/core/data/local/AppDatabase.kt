@@ -14,7 +14,7 @@ import com.riffforge.feature_songs.data.local.entity.SongEntity
         SetlistEntity::class,
         SetlistSongCrossRef::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -26,6 +26,7 @@ class AddSongToSetlistUseCase(private val repository: SetlistRepository) {
 
 data class SetlistUseCases(
     val getSetlists: GetSetlistsUseCase,
+    val getSetlistById: GetSetlistByIdUseCase,
     val addSetlist: AddSetlistUseCase,
     val addSongToSetlist: AddSongToSetlistUseCase
 )

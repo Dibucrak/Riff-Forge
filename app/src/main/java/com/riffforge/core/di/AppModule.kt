@@ -21,7 +21,9 @@ object AppModule {
             app,
             AppDatabase::class.java,
             "riffforge_db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
