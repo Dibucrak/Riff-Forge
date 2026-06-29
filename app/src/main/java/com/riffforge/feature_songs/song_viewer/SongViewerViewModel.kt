@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffforge.feature_setlists.domain.use_case.SetlistUseCases
 import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import com.riffforge.feature_songs.domain.util.ChordTransposer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SongViewerViewModel @Inject constructor(
     private val songUseCases: SongUseCases,
+    private val setlistUseCases: SetlistUseCases,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -21,10 +23,11 @@ class SongViewerViewModel @Inject constructor(
     val state: State<SongViewerState> = _state
 
     init {
-        savedStateHandle.get<Int>("songId")?.let { songId ->
-            if (songId != -1) {
-                loadSong(songId)
-            }
+        val songId = savedStateHandle.get<Int>("songId") ?: -1
+        val setId = savedStateHandle.get<Int>("setId") ?: -1
+
+        if (songId != -1) {
+            loadSong(songId, if (setId != -1) setId else null)
         }
     }
 
@@ -81,15 +84,46 @@ class SongViewerViewModel @Inject constructor(
         }
     }
 
-    private fun loadSong(id: Int) {
+    private fun loadSong(id: Int, setId: Int?) {
         viewModelScope.launch {
             val fetchedSong = songUseCases.getSongById(id)
             if (fetchedSong != null) {
+
+                var currentSetlistId: Int? = null
+                var setlistName: String? = null
+                var prevId: Int? = null
+                var nextId: Int? = null
+                var currentIndex = 0
+                var totalSongs = 0
+
+                if (setId != null) {
+                    val setlistDetail = setlistUseCases.getSetlistById(setId)
+                    if (setlistDetail != null) {
+                        currentSetlistId = setId
+                        setlistName = setlistDetail.setlist.name
+                        totalSongs = setlistDetail.songs.size
+                        currentIndex = setlistDetail.songs.indexOfFirst { it.id == id }
+
+                        if (currentIndex > 0) {
+                            prevId = setlistDetail.songs[currentIndex - 1].id
+                        }
+                        if (currentIndex != -1 && currentIndex < totalSongs - 1) {
+                            nextId = setlistDetail.songs[currentIndex + 1].id
+                        }
+                    }
+                }
+
                 _state.value = state.value.copy(
                     song = fetchedSong,
                     originalContent = fetchedSong.content,
                     displayedContent = fetchedSong.content,
-                    isLoading = false
+                    isLoading = false,
+                    currentSetlistId = currentSetlistId,
+                    setlistName = setlistName,
+                    previousSongId = prevId,
+                    nextSongId = nextId,
+                    currentSongIndex = currentIndex,
+                    totalSongsInSet = totalSongs
                 )
             } else {
                 _state.value = state.value.copy(isLoading = false)
@@ -100,7 +134,6 @@ class SongViewerViewModel @Inject constructor(
     private fun applyHarmonicShift(transposeDiff: Int, capoDiff: Int) {
         val newTranspose = state.value.transposeSemitones + transposeDiff
         val newCapo = state.value.capo + capoDiff
-
         val totalShift = newTranspose - newCapo
 
         val newContent = ChordTransposer.transposeContent(

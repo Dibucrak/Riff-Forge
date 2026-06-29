@@ -52,7 +52,7 @@ import com.riffforge.feature_songs.presentation.components.SongItem
 @Composable
 fun SetlistDetailScreen(
     onNavigateUp: () -> Unit,
-    onNavigateToSongViewer: (Int) -> Unit,
+    onNavigateToSongViewer: (Int, Int) -> Unit,
     viewModel: SetlistDetailViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
@@ -169,7 +169,7 @@ fun SetlistDetailScreen(
                             items(state.setlistDetail.songs) { song ->
                                 SongItem(
                                     song = song,
-                                    onClick = { onNavigateToSongViewer(song.id) }
+                                    onClick = { onNavigateToSongViewer(song.id, state.setlistDetail.setlist.id) }
                                 )
                             }
                         }

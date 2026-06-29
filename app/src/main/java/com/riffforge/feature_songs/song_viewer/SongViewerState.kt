@@ -12,5 +12,12 @@ data class SongViewerState(
     val isAutoScrolling: Boolean = false,
     val scrollSpeed: Int = 2,
     val textSizeSp: Float = 16f,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+
+    val currentSetlistId: Int? = null,
+    val setlistName: String? = null,
+    val nextSongId: Int? = null,
+    val previousSongId: Int? = null,
+    val currentSongIndex: Int = 0,
+    val totalSongsInSet: Int = 0
 )

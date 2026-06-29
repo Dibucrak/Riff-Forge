@@ -50,7 +50,7 @@ fun SongsScreen(
     onNavigateToAddSong: () -> Unit,
     onNavigateToSetlistDetail: (Int) -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToSongViewer: (Int) -> Unit,
+    onNavigateToSongViewer: (Int, Int) -> Unit,
     songsViewModel: SongsViewModel = hiltViewModel(),
     setlistsViewModel: SetlistsViewModel = hiltViewModel()
 ) {
@@ -126,7 +126,7 @@ fun SongsScreen(
                         items(songsState.songs) { song ->
                             SongItem(
                                 song = song,
-                                onClick = { onNavigateToSongViewer(song.id) }
+                                onClick = { onNavigateToSongViewer(song.id, -1) }
                             )
                         }
                     }
