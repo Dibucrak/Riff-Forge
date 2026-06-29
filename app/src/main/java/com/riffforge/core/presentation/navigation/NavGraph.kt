@@ -112,7 +112,8 @@ fun NavGraph(
                 onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
                 onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) },
                 onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) },
-                onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) }
+                onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) },
+                onNavigateToScales = { navController.navigate(Screen.Scales.route) }
             )
         }
 
@@ -195,6 +196,12 @@ fun NavGraph(
 
         composable(route = Screen.Progressions.route) {
             ProgressionScreen(
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+        composable(route = Screen.Scales.route) {
+            com.riffforge.feature_theory.presentation.scales.ScalesScreen(
                 onNavigateUp = { navController.navigateUp() }
             )
         }

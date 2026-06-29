@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.MusicVideo
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Timer
@@ -44,7 +45,8 @@ fun ToolsScreen(
     onNavigateToCommunity: () -> Unit,
     onNavigateToEarTraining: () -> Unit,
     onNavigateToDailyLearning: () -> Unit,
-    onNavigateToProgressions: () -> Unit
+    onNavigateToProgressions: () -> Unit,
+    onNavigateToScales: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -64,6 +66,13 @@ fun ToolsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            ToolCardItem(
+                title = "Constructor de Escalas",
+                description = "Visualiza patrones y modos en todo el diapasón.",
+                icon = Icons.Default.LinearScale,
+                onClick = onNavigateToScales
+            )
+
             ToolCardItem(
                 title = "Aprendizaje Diario",
                 description = "Descubre el acorde del día y completa tus retos.",
