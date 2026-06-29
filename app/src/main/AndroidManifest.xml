@@ -23,12 +23,31 @@
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.RiffForge">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="riffforge" />
+            </intent-filter>
+
         </activity>
 
-    </application>
+        <receiver
+            android:name=".feature_widgets.presentation.QuickActionsWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_actions_widget_info" />
+        </receiver>
 
+    </application>
 </manifest>
