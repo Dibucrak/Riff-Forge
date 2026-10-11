@@ -13,5 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Riff Forge"
+rootProject.name = "RiffForge"
 include(":app")
+include(":shared")
+include(":composeApp")

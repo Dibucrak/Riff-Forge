@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.3">
+   <BuildAction>
+      <BuildActionEntries>
+         <BuildActionEntry buildForRunning = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A7"
+               BuildableName = "RiffForge.app"
+               BlueprintName = "RiffForge"
+               ReferencedContainer = "container:RiffForge.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <LaunchAction
+      useCustomWorkingDirectory = "NO"
+      buildConfiguration = "Debug"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "A7"
+            BuildableName = "RiffForge.app"
+            BlueprintName = "RiffForge"
+            ReferencedContainer = "container:RiffForge.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+</Scheme>

@@ -1,0 +1,2 @@
+
+<RiffForge:shared>:com.riffforge.shared.data:com.riffforge.shared.di:!com.riffforge.shared.domain.model:&com.riffforge.shared.domain.repository:$com.riffforge.shared.domain.use_case: com.riffforge.shared.domain.util:com.riffforge.shared.platform
