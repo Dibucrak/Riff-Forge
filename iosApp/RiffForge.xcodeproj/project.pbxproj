@@ -1,0 +1,33 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		A1 = {isa = PBXBuildFile; fileRef = A2; };
+		B1 = {isa = PBXBuildFile; fileRef = B2; };
+		A3 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = RiffForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1, B1); runOnlyForDeploymentPostprocessing = 0; };
+		A5 = {isa = PBXGroup; children = (A2, B2); path = RiffForge; sourceTree = "<group>"; };
+		C5 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A6 = {isa = PBXProject; attributes = {LastSwiftUpdateCheck = 1620;}; buildConfigurationList = A9; compatibilityVersion = "Xcode 14.0"; mainGroup = A5; projectDirPath = ""; projectRoot = ""; targets = (A7); };
+		A11 = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Embed and Sign Frameworks"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "# Embed Compose Multiplatform frameworks\nCOMPOSE_FRAMEWORK=\"\${SOURCE_ROOT}/../composeApp/build/bin/iosSimulatorArm64/debugFramework/composeApp.framework\"\nSHARED_FRAMEWORK=\"\${SOURCE_ROOT}/../shared/build/bin/iosSimulatorArm64/sharedDebugFramework/shared.framework\"\nAPP_FRAMEWORKS=\"\${BUILT_PRODUCTS_DIR}/\${WRAPPER_NAME}/Frameworks\"\n\nmkdir -p \"\${APP_FRAMEWORKS}\"\n\nif [ -d \"\${COMPOSE_FRAMEWORK}\" ]; then\n  cp -Rf \"\${COMPOSE_FRAMEWORK}\" \"\${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: composeApp.framework not found\"\n  exit 1\nfi\n\nif [ -d \"\${SHARED_FRAMEWORK}\" ]; then\n  cp -Rf \"\${SHARED_FRAMEWORK}\" \"\${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: shared.framework not found\"\n  exit 1\nfi\n\nfor framework in \"\${APP_FRAMEWORKS}\"/*.framework; do\n  if [ -f \"\${framework}/\$(basename \"\${framework}\" .framework)\" ]; then\n    codesign --force --sign - \"\${framework}\"\n  fi\ndone\n"; };
+		A7 = {isa = PBXNativeTarget; buildConfigurationList = A8; buildPhases = (A4, C5, A11); buildRules = (); dependencies = (); name = RiffForge; productName = RiffForge; productReference = A3; productType = "com.apple.product-type.application"; };
+		A10 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.riffforge.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphonesimulator;
+				GENERATE_INFOPLIST_FILE = YES;
+				TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				FRAMEWORK_SEARCH_PATHS = "$(inherited) ../composeApp/build/bin/iosSimulatorArm64/debugFramework ../shared/build/bin/iosSimulatorArm64/sharedDebugFramework";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				OTHER_LDFLAGS = "$(inherited) -framework composeApp -framework shared";
+				EXCLUDED_ARCHS = x86_64;
+				}; name = Debug; };
+		A8 = {isa = XCConfigurationList; buildConfigurations = (A10); defaultConfigurationIsVisible = 0; };
+		A9 = {isa = XCConfigurationList; buildConfigurations = (A10); defaultConfigurationIsVisible = 0; };
+	};
+	rootObject = A6;
+}

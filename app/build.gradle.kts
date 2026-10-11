@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.ksp)
+    kotlin("plugin.compose") version libs.versions.kotlin
 }
 
 android {
@@ -43,9 +44,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
-    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -54,6 +52,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
