@@ -1,0 +1,4 @@
+com.riffforge.composeapp.test.composeApp-androidTest-0 /Users/dibucrak/Riff-Forge/composeApp/build/generated/res/resValues/androidTest/debug
+com.riffforge.composeapp.test.composeApp-mergeDebugAndroidTestResources-1 /Users/dibucrak/Riff-Forge/composeApp/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+com.riffforge.composeapp.test.composeApp-mergeDebugAndroidTestResources-2 /Users/dibucrak/Riff-Forge/composeApp/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+com.riffforge.composeapp.test.composeApp-debugAndroidTest-3 /Users/dibucrak/Riff-Forge/composeApp/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
