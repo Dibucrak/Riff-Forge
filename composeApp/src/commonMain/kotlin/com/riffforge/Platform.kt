@@ -1,5 +1,4 @@
 package com.riffforge
 
-import androidx.compose.ui.window.ComposeUIViewController
-
-fun MainViewController() = ComposeUIViewController(configure = { enforceStrictPlistSanityCheck = false }) { App() }
+// Platform-specific entry point is expected in iosMain.
+// This file is kept as a placeholder for commonMain.

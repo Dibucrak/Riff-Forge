@@ -73,4 +73,33 @@ object ChordTransposer {
             sharpNotes[newIndex]
         }
     }
+
+    private val spanishNotesSharps = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
+    private val spanishNotesFlats = listOf("Do", "Reb", "Re", "Mib", "Mi", "Fa", "Solb", "Sol", "Lab", "La", "Sib", "Si")
+
+    fun toSpanishNote(note: String): String {
+        val index = sharpNotes.indexOf(note)
+        if (index == -1) {
+            val flatIndex = flatNotes.indexOf(note)
+            if (flatIndex == -1) return note
+            return if (note.contains("b")) spanishNotesFlats[flatIndex] else spanishNotesSharps[flatIndex]
+        }
+        return spanishNotesSharps[index]
+    }
+
+    fun fromSpanishNote(note: String): String {
+        val index = spanishNotesSharps.indexOf(note)
+        if (index != -1) {
+            return if (note.contains("#") || note.contains("b")) {
+                if (note.contains("b")) flatNotes[index] else sharpNotes[index]
+            } else sharpNotes[index]
+        }
+        val flatIndex = spanishNotesFlats.indexOf(note)
+        if (flatIndex != -1) return flatNotes[flatIndex]
+        return note
+    }
+
+    fun getNoteDisplayName(note: String, useSpanish: Boolean): String {
+        return if (useSpanish) toSpanishNote(note) else note
+    }
 }

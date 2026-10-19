@@ -3,6 +3,7 @@ package com.riffforge.feature_chords.presentation
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,20 +16,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,137 +38,180 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.riffforge.core.domain.util.AppSettings
+import com.riffforge.core.presentation.components.GlassBackground
+import com.riffforge.core.presentation.components.GlassCard
+import com.riffforge.core.presentation.components.GlassCardElevated
+import com.riffforge.core.presentation.components.GlassSectionHeader
+import com.riffforge.core.presentation.theme.*
 import com.riffforge.feature_chords.domain.model.Chord
 import com.riffforge.feature_chords.domain.util.ChordLibrary
+import com.riffforge.feature_songs.domain.util.ChordTransposer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChordDictionaryScreen(
     onNavigateUp: () -> Unit,
+    isDarkTheme: Boolean = false,
     viewModel: ChordDictionaryViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
+    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
+    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
+    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
+    val useSpanish = AppSettings.useSpanishNotation
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Diccionario de Acordes", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
-            ) {
-                items(ChordLibrary.roots) { root ->
-                    val isSelected = state.selectedRoot == root
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { viewModel.onEvent(ChordDictionaryEvent.SelectRoot(root)) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = root,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
-            ) {
-                items(ChordLibrary.types) { type ->
-                    val isSelected = state.selectedType == type
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { viewModel.onEvent(ChordDictionaryEvent.SelectType(type)) }
-                            .padding(horizontal = 24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = type,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            ElevatedCard(
+    GlassBackground(isDarkTheme = isDarkTheme) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Top bar — glassmorphic header
+            GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                isDarkTheme = isDarkTheme,
+                cornerRadius = 16.dp
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = glassSurface.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar", tint = textColor)
+                    }
                     Text(
-                        text = "${state.selectedRoot} ${state.selectedType}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "Diccionario de Acordes",
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
                     )
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+            // Content area - below header (solid, nothing overlaps)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 16.dp, top = 100.dp, end = 16.dp, bottom = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    if (state.currentChord != null) {
-                        ChordDiagramCanvas(chord = state.currentChord)
-                    } else {
-                        Box(modifier = Modifier.height(300.dp), contentAlignment = Alignment.Center) {
+                // Root selector row
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                ) {
+                    items(ChordLibrary.roots) { root ->
+                        val displayRoot = ChordTransposer.getNoteDisplayName(root, useSpanish)
+                        val isSelected = state.selectedRoot == root
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) AccentTint.copy(alpha = 0.4f)
+                                    else glassSurface.copy(alpha = 0.3f)
+                                )
+                                .clickable { viewModel.onEvent(ChordDictionaryEvent.SelectRoot(root)) },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Diagrama no disponible aún",
-                                color = MaterialTheme.colorScheme.error
+                                text = displayRoot,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) AccentTint else textColor
                             )
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Type selector row
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                ) {
+                    items(ChordLibrary.types) { type ->
+                        val isSelected = state.selectedType == type
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (isSelected) AccentTint.copy(alpha = 0.3f)
+                                    else glassSurface.copy(alpha = 0.3f)
+                                )
+                                .clickable { viewModel.onEvent(ChordDictionaryEvent.SelectType(type)) }
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = type,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSelected) AccentTint else textColor
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Chord display card
+                GlassCardElevated(
+                    modifier = Modifier.fillMaxWidth(),
+                    isDarkTheme = isDarkTheme,
+                    cornerRadius = 24.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        val displayRoot = ChordTransposer.getNoteDisplayName(state.selectedRoot, useSpanish)
+                        Text(
+                            text = "$displayRoot ${state.selectedType}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AccentTint
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        if (state.currentChord != null) {
+                            ChordDiagramCanvas(chord = state.currentChord, isDarkTheme = isDarkTheme)
+                        } else {
+                            Box(modifier = Modifier.height(300.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Diagrama no disponible aún",
+                                    color = dimTextColor
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-fun ChordDiagramCanvas(chord: Chord) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val errorColor = MaterialTheme.colorScheme.error
+fun ChordDiagramCanvas(chord: Chord, isDarkTheme: Boolean = false) {
+    val primaryColor = AccentTint
+    val onPrimaryArgb = OnAccent.toArgb()
+    val onSurfaceColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
+    val errorColor = SystemRed
 
     Box(
         modifier = Modifier
@@ -262,7 +304,7 @@ fun ChordDiagramCanvas(chord: Chord) {
                                     cx,
                                     cy + 12f,
                                     android.graphics.Paint().apply {
-                                        color = android.graphics.Color.WHITE
+                                        color = onPrimaryArgb
                                         textSize = 32f
                                         isAntiAlias = true
                                         textAlign = android.graphics.Paint.Align.CENTER
@@ -305,7 +347,7 @@ fun ChordDiagramCanvas(chord: Chord) {
                             startX + ((endX - startX) / 2),
                             y + 12f,
                             android.graphics.Paint().apply {
-                                color = android.graphics.Color.WHITE
+                                color = onPrimaryArgb
                                 textSize = 32f
                                 isAntiAlias = true
                                 textAlign = android.graphics.Paint.Align.CENTER

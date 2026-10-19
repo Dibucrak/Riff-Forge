@@ -81,6 +81,12 @@ class SongViewerViewModel @Inject constructor(
                 _state.value = state.value.copy(preferFlats = newPreferFlats)
                 applyHarmonicShift(0, 0)
             }
+            is SongViewerEvent.ToggleSpanishNotation -> {
+                val newSpanish = !state.value.useSpanishNotation
+                com.riffforge.core.domain.util.AppSettings.setSpanishNotation(newSpanish)
+                _state.value = state.value.copy(useSpanishNotation = newSpanish)
+                applyHarmonicShift(0, 0)
+            }
         }
     }
 
@@ -136,11 +142,16 @@ class SongViewerViewModel @Inject constructor(
         val newCapo = state.value.capo + capoDiff
         val totalShift = newTranspose - newCapo
 
-        val newContent = ChordTransposer.transposeContent(
+        var newContent = ChordTransposer.transposeContent(
             content = state.value.originalContent,
             semitones = totalShift,
             preferFlats = state.value.preferFlats
         )
+
+        // Apply Spanish notation if enabled
+        if (state.value.useSpanishNotation) {
+            newContent = ChordTransposer.convertNoteSystem(newContent, toSpanish = true)
+        }
 
         _state.value = state.value.copy(
             transposeSemitones = newTranspose,

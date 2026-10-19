@@ -15,22 +15,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,145 +39,165 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.riffforge.core.presentation.components.*
+import com.riffforge.core.presentation.theme.*
 import com.riffforge.feature_theory.domain.util.ScaleLibrary
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScalesScreen(
     onNavigateUp: () -> Unit,
+    isDarkTheme: Boolean,
     viewModel: ScalesViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
+    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
+    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
+    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Constructor de Escalas", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                items(ScaleLibrary.roots) { root ->
-                    val isSelected = state.selectedRoot == root
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { viewModel.onEvent(ScalesEvent.SelectRoot(root)) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = root,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                items(ScaleLibrary.scales) { scale ->
-                    val isSelected = state.selectedScale?.name == scale.name
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { viewModel.onEvent(ScalesEvent.SelectScale(scale)) }
-                            .padding(horizontal = 24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = scale.name,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Detalles Teóricos
-            ElevatedCard(
+    GlassBackground(isDarkTheme = isDarkTheme) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Top bar
+            GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                isDarkTheme = isDarkTheme,
+                cornerRadius = 16.dp
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = glassSurface.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar", tint = textColor)
+                    }
                     Text(
-                        text = state.selectedScale?.description ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Constructor de Escalas",
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Mapa del Diapasón",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val scrollState = rememberScrollState()
-            Box(
+            // Content area - below header (solid, nothing overlaps)
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .horizontalScroll(scrollState)
-                    .padding(horizontal = 16.dp)
+                    .fillMaxSize()
+                    .padding(top = 100.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                FretboardCanvas(
-                    targetNotesIndices = state.targetNotesIndices,
-                    rootIndex = ScaleLibrary.roots.indexOf(state.selectedRoot)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    items(ScaleLibrary.roots) { root ->
+                        val isSelected = state.selectedRoot == root
+                        val bg = if (isSelected) AccentTint else (if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim)
+                        val textC = if (isSelected) OnAccent else textColor
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(bg)
+                                .clickable { viewModel.onEvent(ScalesEvent.SelectRoot(root)) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = root, fontWeight = FontWeight.Bold, color = textC)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    items(ScaleLibrary.scales) { scale ->
+                        val isSelected = state.selectedScale?.name == scale.name
+                        val bg = if (isSelected) AccentTint else (if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim)
+                        val textC = if (isSelected) OnAccent else dimTextColor
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(bg)
+                                .clickable { viewModel.onEvent(ScalesEvent.SelectScale(scale)) }
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = scale.name, fontWeight = FontWeight.Medium, color = textC)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Glass card for description
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    isDarkTheme = isDarkTheme,
+                    cornerRadius = 16.dp
+                ) {
+                    Text(
+                        text = state.selectedScale?.description ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = dimTextColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Mapa del Diapasón",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentTint
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val scrollState = rememberScrollState()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .horizontalScroll(scrollState)
+                ) {
+                    FretboardCanvas(
+                        targetNotesIndices = state.targetNotesIndices,
+                        rootIndex = ScaleLibrary.roots.indexOf(state.selectedRoot),
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun FretboardCanvas(targetNotesIndices: List<Int>, rootIndex: Int) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+fun FretboardCanvas(targetNotesIndices: List<Int>, rootIndex: Int, isDarkTheme: Boolean) {
+    val primaryColor = AccentTint
+    val secondaryColor = AccentTint
+    val onSurfaceColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
+    val surfaceVariantColor = if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim
 
     Canvas(modifier = Modifier.size(width = 900.dp, height = 200.dp)) {
         val numStrings = 6

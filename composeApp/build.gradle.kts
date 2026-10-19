@@ -64,7 +64,11 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
-        val androidMain by getting
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.androidx.activity.compose)
+            }
+        }
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
         val iosX64Main by getting

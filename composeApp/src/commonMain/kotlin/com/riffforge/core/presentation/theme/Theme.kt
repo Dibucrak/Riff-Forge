@@ -4,7 +4,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.riffforge.core.domain.util.AppSettings
+import com.riffforge.core.domain.util.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,
@@ -18,7 +22,11 @@ private val DarkColorScheme = darkColorScheme(
     background = BackgroundDark,
     onBackground = OnBackgroundDark,
     surface = SurfaceDark,
-    onSurface = OnSurfaceDark
+    onSurface = OnSurfaceDark,
+    surfaceVariant = SecondarySystemBackgroundDark,
+    onSurfaceVariant = Color(0x99EBEBF5),
+    outline = Color(0x2EFFFFFF),
+    error = SystemRedDark
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -33,19 +41,38 @@ private val LightColorScheme = lightColorScheme(
     background = BackgroundLight,
     onBackground = OnBackgroundLight,
     surface = SurfaceLight,
-    onSurface = OnSurfaceLight
+    onSurface = OnSurfaceLight,
+    surfaceVariant = SecondarySystemGroupedBackgroundLight,
+    onSurfaceVariant = Color(0x993C3C43),
+    outline = Color(0x1F3C3C43),
+    error = SystemRedLight
 )
+
+/**
+ * Resolves the effective appearance from [AppSettings.themeMode] (System / Light / Dark).
+ */
+@Composable
+fun resolveDarkTheme(): Boolean {
+    val systemDark = isSystemInDarkTheme()
+    return when (AppSettings.themeMode) {
+        ThemeMode.SYSTEM -> systemDark
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+}
 
 @Composable
 fun RiffForgeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = resolveDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalRiffDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,16 +23,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,10 +36,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.riffforge.core.presentation.components.*
+import com.riffforge.core.presentation.theme.*
 import com.riffforge.feature_theory.domain.model.Scale
 import com.riffforge.feature_theory.domain.util.ScaleLibrary
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Liquid Glass Scales Screen — scale builder with frosted glass aesthetic.
+ *
+ * Visual design:
+ *   - Full-screen vibrant gradient background with ambient glow orbs
+ *   - Frosted glass header bar with back button
+ *   - Root and scale type selectors use glass chips with accent colors
+ *   - Scale details card uses elevated glass panel
+ *   - Fretboard canvas uses cyan/purple accent colors for notes
+ */
 @Composable
 fun ScalesScreen(
     onNavigateUp: () -> Unit
@@ -54,35 +58,51 @@ fun ScalesScreen(
     var selectedRoot by remember { mutableStateOf("C") }
     var selectedScale by remember { mutableStateOf(ScaleLibrary.scales[0]) }
 
-    // Calculate target note indices for the selected root and scale
     val rootIndex = ScaleLibrary.roots.indexOf(selectedRoot)
     val targetNotesIndices = selectedScale.intervals.map { (rootIndex + it) % 12 }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Constructor de Escalas", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
+    GlassBackground {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+            modifier = Modifier.fillMaxSize()
         ) {
+            // ── Header Bar ───────────────────────────────────────────
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    cornerRadius = 16.dp
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onNavigateUp,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = AccentTint.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Regresar",
+                                tint = AccentTint
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Constructor de Escalas",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextOnGlassPrimary
+                        )
+                    }
+                }
+            }
 
+            item {
+                // ── Root Selector ─────────────────────────────────────
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -94,21 +114,22 @@ fun ScalesScreen(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                .background(if (isSelected) AccentTint else GlassSurfaceDim)
                                 .clickable { selectedRoot = root },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = root,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) OnAccent else TextOnGlassSecondary
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
+                // ── Scale Type Selector ───────────────────────────────
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -120,7 +141,7 @@ fun ScalesScreen(
                             modifier = Modifier
                                 .height(40.dp)
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant)
+                                .background(if (isSelected) AccentTint else GlassSurfaceDim)
                                 .clickable { selectedScale = scale }
                                 .padding(horizontal = 24.dp),
                             contentAlignment = Alignment.Center
@@ -128,49 +149,48 @@ fun ScalesScreen(
                             Text(
                                 text = scale.name,
                                 fontWeight = FontWeight.Medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isSelected) OnAccent else TextOnGlassSecondary
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Scale details card
-                ElevatedCard(
+                // ── Scale Details Card ────────────────────────────────
+                GlassCardElevated(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    cornerRadius = 16.dp
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Text(
                             text = selectedScale.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = TextOnGlassSecondary
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Show the notes in the scale
                         val notes = selectedScale.intervals.map { i -> ScaleLibrary.roots[(rootIndex + i) % 12] }
                         Text(
                             text = "Notas: ${notes.joinToString(", ")}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = AccentTint
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // ── Fretboard Map ─────────────────────────────────────
                 Text(
                     text = "Mapa del Diapasón",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = TextOnGlassPrimary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
@@ -198,10 +218,10 @@ fun ScalesScreen(
 
 @Composable
 fun FretboardCanvas(targetNotesIndices: List<Int>, rootIndex: Int) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+    val primaryColor = AccentTint
+    val secondaryColor = AccentTint
+    val onSurfaceColor = TextOnGlassSecondary
+    val surfaceVariantColor = GlassSurface
 
     Canvas(modifier = Modifier.size(width = 900.dp, height = 200.dp)) {
         val numStrings = 6

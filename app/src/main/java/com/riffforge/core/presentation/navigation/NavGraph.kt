@@ -18,7 +18,7 @@ import com.riffforge.feature_admin.presentation.AdminScreen
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
-import com.riffforge.feature_contributions.presentation.community_explorer.CommunityScreen
+import com.riffforge.feature_cloud_backup.presentation.CloudBackupScreen
 import com.riffforge.feature_ear_training.presentation.EarTrainingScreen
 import com.riffforge.feature_metronome.presentation.MetronomeScreen
 import com.riffforge.feature_profile.presentation.ProfileScreen
@@ -34,7 +34,8 @@ import com.riffforge.feature_tuner.presentation.TunerScreen
 fun NavGraph(
     navController: NavHostController,
     paddingValues: PaddingValues,
-    startDestination: String = Screen.Login.route
+    startDestination: String = Screen.Login.route,
+    isDarkTheme: Boolean = false
 ) {
     NavHost(
         navController = navController,
@@ -87,7 +88,7 @@ fun NavGraph(
             route = Screen.Tuner.route,
             deepLinks = listOf(navDeepLink { uriPattern = "riffforge://tuner" })
         ) {
-            TunerScreen()
+            TunerScreen(isDarkTheme = isDarkTheme)
         }
 
         composable(route = Screen.Songs.route) {
@@ -97,7 +98,8 @@ fun NavGraph(
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                 onNavigateToSongViewer = { songId, setId ->
                     navController.navigate(Screen.SongViewer.route + "/$songId?setId=$setId")
-                }
+                },
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -106,11 +108,12 @@ fun NavGraph(
                 onNavigateToCircleOfFifths = { navController.navigate(Screen.CircleOfFifths.route) },
                 onNavigateToMetronome = { navController.navigate(Screen.Metronome.route) },
                 onNavigateToChordDictionary = { navController.navigate(Screen.ChordDictionary.route) },
-                onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
+                onNavigateToCloudBackup = { navController.navigate(Screen.CloudBackup.route) },
                 onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) },
                 onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) },
                 onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) },
-                onNavigateToScales = { navController.navigate(Screen.Scales.route) }
+                onNavigateToScales = { navController.navigate(Screen.Scales.route) },
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -139,7 +142,8 @@ fun NavGraph(
                     navController.navigate(Screen.SongViewer.route + "/$nextSongId?setId=$currentSetId") {
                         popUpTo(Screen.SongViewer.route + "/{songId}?setId={setId}") { inclusive = true }
                     }
-                }
+                },
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -158,27 +162,30 @@ fun NavGraph(
         }
 
         composable(route = Screen.CircleOfFifths.route) {
-            CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() })
+            CircleOfFifthsScreen(onNavigateUp = { navController.navigateUp() }, isDarkTheme = isDarkTheme)
         }
 
         composable(route = Screen.Metronome.route) {
-            MetronomeScreen(onNavigateUp = { navController.navigateUp() })
+            MetronomeScreen(onNavigateUp = { navController.navigateUp() }, isDarkTheme = isDarkTheme)
         }
 
         composable(route = Screen.ChordDictionary.route) {
-            ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() })
+            ChordDictionaryScreen(onNavigateUp = { navController.navigateUp() }, isDarkTheme = isDarkTheme)
         }
 
-        composable(route = Screen.CommunityExplorer.route) {
-            CommunityScreen(onNavigateUp = { navController.navigateUp() })
+        composable(route = Screen.CloudBackup.route) {
+            CloudBackupScreen(
+                onNavigateUp = { navController.navigateUp() },
+                isDarkTheme = isDarkTheme
+            )
         }
 
         composable(route = Screen.AdminPanel.route) {
-            AdminScreen(onNavigateUp = { navController.navigateUp() })
+            AdminScreen(onNavigateUp = { navController.navigateUp() }, isDarkTheme = isDarkTheme)
         }
 
         composable(route = Screen.EarTraining.route) {
-            EarTrainingScreen(onNavigateUp = { navController.navigateUp() })
+            EarTrainingScreen(onNavigateUp = { navController.navigateUp() }, isDarkTheme = isDarkTheme)
         }
 
         composable(
@@ -187,19 +194,22 @@ fun NavGraph(
         ) {
             com.riffforge.feature_daily_learning.presentation.DailyLearningScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) }
+                onNavigateToEarTraining = { navController.navigate(Screen.EarTraining.route) },
+                isDarkTheme = isDarkTheme
             )
         }
 
         composable(route = Screen.Progressions.route) {
             com.riffforge.feature_theory.presentation.progressions.ProgressionScreen(
-                onNavigateUp = { navController.navigateUp() }
+                onNavigateUp = { navController.navigateUp() },
+                isDarkTheme = isDarkTheme
             )
         }
 
         composable(route = Screen.Scales.route) {
             com.riffforge.feature_theory.presentation.scales.ScalesScreen(
-                onNavigateUp = { navController.navigateUp() }
+                onNavigateUp = { navController.navigateUp() },
+                isDarkTheme = isDarkTheme
             )
         }
 

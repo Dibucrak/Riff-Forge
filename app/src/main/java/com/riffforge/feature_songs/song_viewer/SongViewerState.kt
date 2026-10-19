@@ -9,6 +9,7 @@ data class SongViewerState(
     val transposeSemitones: Int = 0,
     val capo: Int = 0,
     val preferFlats: Boolean = false,
+    val useSpanishNotation: Boolean = false,
     val isAutoScrolling: Boolean = false,
     val scrollSpeed: Int = 2,
     val textSizeSp: Float = 16f,

@@ -2,146 +2,149 @@ package com.riffforge.feature_theory.presentation.circle_of_fifths
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.riffforge.core.presentation.components.*
+import com.riffforge.core.presentation.theme.*
 import com.riffforge.feature_theory.domain.model.KeySignature
 import com.riffforge.feature_theory.domain.util.MusicTheoryData
 import kotlin.math.cos
 import kotlin.math.sin
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Liquid Glass Circle of Fifths — glassmorphic info card with cyan/purple nodes
+ * and chord chips with purple glass backgrounds.
+ */
 @Composable
 fun CircleOfFifthsScreen(
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    isDarkTheme: Boolean
 ) {
     val keys = MusicTheoryData.circleOfFifths
     var selectedKey by remember { mutableStateOf(keys[0]) }
+    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
+    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
+    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Círculo de Quintas") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
-            Box(
+    GlassBackground(isDarkTheme = isDarkTheme) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Top bar
+            GlassCard(
                 modifier = Modifier
-                    .size(320.dp)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                isDarkTheme = isDarkTheme,
+                cornerRadius = 16.dp
             ) {
-                val radiusOuter = 130.dp
-                val radiusInner = 80.dp
-
-                keys.forEachIndexed { index, keySignature ->
-                    val angleStr = Math.toRadians((index * 30.0) - 90.0)
-
-                    val outerX = (cos(angleStr) * radiusOuter.value).dp
-                    val outerY = (sin(angleStr) * radiusOuter.value).dp
-
-                    val innerX = (cos(angleStr) * radiusInner.value).dp
-                    val innerY = (sin(angleStr) * radiusInner.value).dp
-
-                    val isSelected = selectedKey.id == keySignature.id
-
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .align(Alignment.Center)
-                            .offset(x = outerX, y = outerY)
-                            .clip(CircleShape)
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { selectedKey = keySignature },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = keySignature.majorName,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = glassSurface.copy(alpha = 0.3f)
                         )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.Center)
-                            .offset(x = innerX, y = innerY)
-                            .clip(CircleShape)
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent)
-                            .clickable { selectedKey = keySignature },
-                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = keySignature.minorName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar", tint = textColor)
                     }
+                    Text(
+                        text = "Círculo de Quintas",
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp)
+            // Content area
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 80.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                // Circle visualization
+                Box(
+                    modifier = Modifier
+                        .size(320.dp)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val radiusOuter = 130.dp
+                    val radiusInner = 80.dp
+
+                    keys.forEachIndexed { index, keySignature ->
+                        val angleStr = Math.toRadians((index * 30.0) - 90.0)
+                        val outerX = (cos(angleStr) * radiusOuter.value).dp
+                        val outerY = (sin(angleStr) * radiusOuter.value).dp
+                        val innerX = (cos(angleStr) * radiusInner.value).dp
+                        val innerY = (sin(angleStr) * radiusInner.value).dp
+                        val isSelected = selectedKey.id == keySignature.id
+
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .align(Alignment.Center)
+                                .offset(x = outerX, y = outerY)
+                                .clip(CircleShape)
+                                .background(if (isSelected) AccentTint else (if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim))
+                                .clickable { selectedKey = keySignature },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = keySignature.majorName,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                color = if (isSelected) OnAccent else textColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .align(Alignment.Center)
+                                .offset(x = innerX, y = innerY)
+                                .clip(CircleShape)
+                                .background(if (isSelected) AccentTint else Color.Transparent)
+                                .clickable { selectedKey = keySignature },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = keySignature.minorName,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (isSelected) OnAccent else dimTextColor
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Info card
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    isDarkTheme = isDarkTheme,
+                    cornerRadius = 20.dp
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -151,21 +154,22 @@ fun CircleOfFifthsScreen(
                         Text(
                             text = "Tonalidad: ${selectedKey.majorName} / ${selectedKey.minorName}",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
                         )
                         Text(
                             text = "Alt: ${selectedKey.accidentals}",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = AccentTint
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = "Acordes en la escala:",
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = dimTextColor
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -177,13 +181,27 @@ fun CircleOfFifthsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             rowChords.forEach { chord ->
-                                SuggestionChip(
-                                    onClick = { },
-                                    label = { Text(chord, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(
+                                            AccentTint.copy(alpha = 0.2f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = chord,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center,
+                                        color = textColor,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }

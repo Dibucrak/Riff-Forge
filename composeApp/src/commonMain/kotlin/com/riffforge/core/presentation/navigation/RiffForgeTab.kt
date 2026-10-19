@@ -2,6 +2,7 @@ package com.riffforge.core.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.runtime.Composable
@@ -11,6 +12,20 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 
 sealed class RiffForgeTab : Tab {
 
+    object Home : RiffForgeTab() {
+        @Composable
+        override fun Content() {
+            com.riffforge.feature_home.presentation.HomeScreen()
+        }
+
+        override val options: TabOptions
+            @Composable get() = TabOptions(
+                index = 0u,
+                title = "Inicio",
+                icon = rememberVectorPainter(Icons.Default.Home)
+            )
+    }
+
     object Tuner : RiffForgeTab() {
         @Composable
         override fun Content() {
@@ -19,7 +34,7 @@ sealed class RiffForgeTab : Tab {
 
         override val options: TabOptions
             @Composable get() = TabOptions(
-                index = 0u,
+                index = 1u,
                 title = "Afinador",
                 icon = rememberVectorPainter(Icons.Default.Mic)
             )
@@ -33,7 +48,7 @@ sealed class RiffForgeTab : Tab {
 
         override val options: TabOptions
             @Composable get() = TabOptions(
-                index = 1u,
+                index = 2u,
                 title = "Canciones",
                 icon = rememberVectorPainter(Icons.Default.LibraryMusic)
             )
@@ -47,13 +62,13 @@ sealed class RiffForgeTab : Tab {
 
         override val options: TabOptions
             @Composable get() = TabOptions(
-                index = 2u,
+                index = 3u,
                 title = "Herramientas",
                 icon = rememberVectorPainter(Icons.Default.Build)
             )
     }
 
     companion object {
-        val List = listOf(Tuner, Songs, Tools)
+        val List = listOf(Home, Tuner, Songs, Tools)
     }
 }

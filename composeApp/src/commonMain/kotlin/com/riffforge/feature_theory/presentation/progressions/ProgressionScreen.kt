@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,19 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicVideo
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,12 +30,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.riffforge.core.presentation.components.*
+import com.riffforge.core.presentation.theme.*
 import com.riffforge.feature_theory.domain.util.ProgressionLibrary
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Liquid Glass Progression Screen — chord progressions with frosted glass aesthetic.
+ *
+ * Visual design:
+ *   - Full-screen vibrant gradient background with ambient glow orbs
+ *   - Frosted glass header bar with back button
+ *   - Genre selectors use glass chips with accent colors
+ *   - Each progression card uses elevated glass panel
+ *   - Chord chips use purple-tinted glass surfaces
+ */
 @Composable
 fun ProgressionScreen(
     onNavigateUp: () -> Unit
@@ -55,31 +56,44 @@ fun ProgressionScreen(
 
     val displayedProgressions = ProgressionLibrary.progressions.filter { it.genre == selectedGenre }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Generador de Progresiones", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
+    GlassBackground {
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // ── Header Bar ───────────────────────────────────────────
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                cornerRadius = 16.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = AccentTint.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = AccentTint
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Generador de Progresiones",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextOnGlassPrimary
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
+            // ── Genre Selector ───────────────────────────────────────
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -91,7 +105,7 @@ fun ProgressionScreen(
                         modifier = Modifier
                             .height(40.dp)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (isSelected) AccentTint else GlassSurfaceDim)
                             .clickable { selectedGenre = genre }
                             .padding(horizontal = 24.dp),
                         contentAlignment = Alignment.Center
@@ -99,29 +113,29 @@ fun ProgressionScreen(
                         Text(
                             text = genre,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isSelected) OnAccent else TextOnGlassSecondary
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // ── Progressions List ────────────────────────────────────
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(displayedProgressions) { progression ->
-                    ElevatedCard(
+                    GlassCardElevated(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        cornerRadius = 24.dp
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp)
+                                .padding(4.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -132,12 +146,12 @@ fun ProgressionScreen(
                                     text = progression.name,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = AccentTint
                                 )
                                 Icon(
                                     imageVector = Icons.Default.MusicVideo,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary
+                                    tint = AccentTint
                                 )
                             }
 
@@ -146,24 +160,27 @@ fun ProgressionScreen(
                             Text(
                                 text = progression.description,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = TextOnGlassSecondary
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            HorizontalDivider(
+                                color = TextOnGlassDim.copy(alpha = 0.3f),
+                                thickness = 0.5.dp
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
                                 text = "Análisis Armónico:",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = TextOnGlassPrimary,
                                 fontWeight = FontWeight.Bold
                             )
 
                             Text(
                                 text = progression.romanNumerals,
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.secondary,
+                                color = AccentTint,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
@@ -171,7 +188,7 @@ fun ProgressionScreen(
                             Text(
                                 text = "Acordes de Ejemplo:",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = TextOnGlassPrimary,
                                 fontWeight = FontWeight.Bold
                             )
 
@@ -182,15 +199,25 @@ fun ProgressionScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 progression.chords.forEach { chord ->
-                                    SuggestionChip(
-                                        onClick = { },
-                                        label = { Text(chord, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                                        modifier = Modifier.weight(1f),
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                        ),
-                                        border = null
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(36.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(AccentTint.copy(alpha = 0.25f))
+                                            .clickable { }
+                                            .padding(horizontal = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = chord,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            textAlign = TextAlign.Center,
+                                            color = TextOnGlassPrimary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
                                 }
                             }
                         }
