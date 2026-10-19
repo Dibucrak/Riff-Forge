@@ -9,7 +9,19 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+/composeApp/build
+/shared/build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Agent memory — never commit
+.junie/
+
+# API keys and secrets
+google-services.json
+*.jks
+*.p12
+*.p8
+FirebaseOptions.plist
