@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Logo.png" width="128" height="128" alt="RiffForge Logo" />
+<img src="Logo.png" width="160" height="160" alt="RiffForge Logo" />
 
 # RiffForge
 
