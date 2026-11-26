@@ -4,7 +4,7 @@
 
 # RiffForge
 
-**Tu compañero musical todo en uno** — afinador, metrónomo, diccionario de acordes, teoría musical y más.
+**Your all-in-one music companion** — tuner, metronome, chord dictionary, music theory, and more.
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1+-brightgreen.svg)](https://kotlinlang.org)
 [![KMP](https://img.shields.io/badge/KMP-Multiplatform-blue.svg)](https://kotlinlang.org/lp/multiplatform/)
@@ -15,80 +15,72 @@
 
 ---
 
-## 🎸 Características
+## 🎸 Features
 
-- **Afinador** — Afiña tu instrumento con precisión
-- **Metrónomo** — Mantén el ritmo con metrónomo configurable
-- **Diccionario de acordes** — Biblioteca completa de acordes con diagramas
-- **Teoría musical** — Círculo de quintas, escalas y progresiones armónicas
-- **Repertorio** — Organiza tus canciones con transposición de acordes
-- **Backup en la nube** — Guarda y restaura tu progreso desde la nube
-- **Soporte en español** — Nomenclatura de notas en español o inglés
+- **Tuner** — Tune your instrument with precision
+- **Metronome** — Keep time with a configurable metronome
+- **Chord Dictionary** — Comprehensive chord library with fretboard diagrams
+- **Music Theory** — Circle of Fifths, scales, and harmonic progressions
+- **Repertoire** — Organize your songs with chord transposition
+- **Cloud Backup** — Save and restore your progress from the cloud
+- **Spanish Support** — Note nomenclature in Spanish or English
 
-## 🏗️ Arquitectura
+## 🏗️ Architecture
 
-RiffForge es una app **Kotlin Multiplatform (KMP)** que comparte código entre Android e iOS:
+RiffForge is a **Kotlin Multiplatform (KMP)** app sharing code across Android and iOS:
 
-| Módulo | Plataforma | Descripción |
-|--------|-----------|-------------|
-| `app/` | Android nativo | App principal con Firebase, Hilt y UI Compose |
-| `composeApp/` | KMP (Android + iOS) | UI compartida vía Compose Multiplatform |
-| `shared/` | KMP (common) | Lógica de negocio compartida (acordes, transposición) |
-| `iosApp/` | iOS nativo | Contenedor SwiftUI que incrusta composeApp |
+| Module | Platform | Description |
+|--------|----------|-------------|
+| `app/` | Native Android | Main app with Firebase, Hilt, and Compose UI |
+| `composeApp/` | KMP (Android + iOS) | Shared UI via Compose Multiplatform |
+| `shared/` | KMP (common) | Shared business logic (chords, transposition) |
+| `iosApp/` | Native iOS | SwiftUI wrapper embedding `composeApp` |
 
-### Diseño
+### Design
 
-Todo el proyecto usa el lenguaje de diseño **Liquid Glass**, inspirado en Apple Vision Pro, con:
-- Fondos neutros y un solo color de acento (naranja forja `#FF9F0A`)
-- Componentes de cristal esmerilado
-- Sombras neutras y texto adaptativo
-- Soporte para modo claro y oscuro
+The entire project uses the **Liquid Glass** design language, inspired by Apple Vision Pro, featuring:
+- Neutral backgrounds and a single accent color (forge orange `#FF9F0A`)
+- Frosted glass components
+- Neutral shadows and adaptive typography
+- Light and dark mode support
 
-## 🚀 Empezando
+## 🚀 Getting Started
 
-### Requisitos
+### Prerequisites
 
 - **JDK 17+**
-- **Android Studio Ladybug+** (o IntelliJ IDEA con plugins de Android/Kotlin)
-- **Xcode 15+** (para construir iOS)
+- **Android Studio Ladybug+** (or IntelliJ IDEA with Android/Kotlin plugins)
+- **Xcode 15+** (for building iOS)
 - **Kotlin 2.1+**
 
-### Construir Android
+### Build Android
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-### Construir iOS
+### Build iOS
 
-Abre `iosApp/RiffForge.xcodeproj` en Xcode y ejecuta en simulador o dispositivo.
+Open `iosApp/RiffForge.xcodeproj` in Xcode and run on a simulator or physical device.
 
-### Construir composeApp
+### Build composeApp
 
 ```bash
 ./gradlew :composeApp:assembleDebug
 ```
 
-## 📱 Capturas
+## 📄 License
 
-<div align="center">
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
-<!-- Agregar capturas de pantalla aquí -->
+## 👥 Contributors
 
-</div>
-
-## 📄 Licencia
-
-Este proyecto está bajo la licencia MIT — ver [LICENSE](LICENSE) para detalles.
-
-## 👥 Contribuyentes
-
-- **Dibu** — Creador y desarrollador principal
+- **Dibu** — Creator and lead developer
 
 ---
 
 <div align="center">
 
-**RiffForge** — Forja tu sonido 🎵
+**RiffForge** — Forge your sound 🎵
 
 </div>
