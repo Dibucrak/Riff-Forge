@@ -1,0 +1,69 @@
+# CocoaPods for RiffForge iOS
+
+platform :ios, '15.0'
+
+project 'RiffForge.xcodeproj'
+
+target 'RiffForge' do
+  use_frameworks! :linkage => :dynamic
+
+  # Firebase
+  pod 'Firebase/Auth'
+  pod 'Firebase/Firestore'
+  pod 'Firebase/Storage'
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+      config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm-i386 x86_64'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      config.build_settings['SWIFT_ACTIVE_COMPILATION_CONDITIONS'] = '$(inherited) COCOAPODS'
+      
+      # Fix for Xcode 27 - disable parallelize builds for Firebase pods
+      if target.name.start_with?('Firebase')
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+      end
+
+      # Disable modules for gRPC-Core to avoid cyclic module dependency with Xcode 27
+      if target.name == 'gRPC-Core'
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
+      end
+
+      # Disable modules for abseil as well
+      if target.name.start_with?('abseil')
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
+      end
+    end
+  end
+
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.user_project.native_targets.each do |native_target|
+      native_target.build_configurations.each do |config|
+        config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      end
+    end
+    aggregate_target.user_project.save
+  end
+
+  # Patch gRPC-Core zlib zutil.h to fix fdopen macro conflict with iOS SDK 27.1
+  zutil_path = File.join(__dir__, 'Pods', 'gRPC-Core', 'third_party', 'zlib', 'zutil.h')
+  if File.exist?(zutil_path)
+    begin
+      # Ensure file is writable before patching
+      FileUtils.chmod_R(0755, File.dirname(zutil_path)) rescue nil
+      content = File.read(zutil_path)
+      # Replace the problematic fdopen macro definition
+      content = content.gsub(
+        /#\s*define\s+fdopen\s*\([^)]*\)\s*NULL.*/,
+        '/* fdopen macro removed to avoid conflict with iOS SDK 27.1 */'
+      )
+      File.write(zutil_path, content)
+      puts "Patched zutil.h to fix fdopen macro conflict"
+    rescue => e
+      puts "Warning: Could not patch zutil.h: #{e.message}"
+    end
+  end
+end

@@ -1,33 +1,261 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 56;
 	objects = {
-		A1 = {isa = PBXBuildFile; fileRef = A2; };
-		B1 = {isa = PBXBuildFile; fileRef = B2; };
-		A3 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = RiffForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		B2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		A4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1, B1); runOnlyForDeploymentPostprocessing = 0; };
-		A5 = {isa = PBXGroup; children = (A2, B2); path = RiffForge; sourceTree = "<group>"; };
-		C5 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A6 = {isa = PBXProject; attributes = {LastSwiftUpdateCheck = 1620;}; buildConfigurationList = A9; compatibilityVersion = "Xcode 14.0"; mainGroup = A5; projectDirPath = ""; projectRoot = ""; targets = (A7); };
-		A11 = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Embed and Sign Frameworks"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "# Embed Compose Multiplatform frameworks\nCOMPOSE_FRAMEWORK=\"\${SOURCE_ROOT}/../composeApp/build/bin/iosSimulatorArm64/debugFramework/composeApp.framework\"\nSHARED_FRAMEWORK=\"\${SOURCE_ROOT}/../shared/build/bin/iosSimulatorArm64/sharedDebugFramework/shared.framework\"\nAPP_FRAMEWORKS=\"\${BUILT_PRODUCTS_DIR}/\${WRAPPER_NAME}/Frameworks\"\n\nmkdir -p \"\${APP_FRAMEWORKS}\"\n\nif [ -d \"\${COMPOSE_FRAMEWORK}\" ]; then\n  cp -Rf \"\${COMPOSE_FRAMEWORK}\" \"\${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: composeApp.framework not found\"\n  exit 1\nfi\n\nif [ -d \"\${SHARED_FRAMEWORK}\" ]; then\n  cp -Rf \"\${SHARED_FRAMEWORK}\" \"\${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: shared.framework not found\"\n  exit 1\nfi\n\nfor framework in \"\${APP_FRAMEWORKS}\"/*.framework; do\n  if [ -f \"\${framework}/\$(basename \"\${framework}\" .framework)\" ]; then\n    codesign --force --sign - \"\${framework}\"\n  fi\ndone\n"; };
-		A7 = {isa = PBXNativeTarget; buildConfigurationList = A8; buildPhases = (A4, C5, A11); buildRules = (); dependencies = (); name = RiffForge; productName = RiffForge; productReference = A3; productType = "com.apple.product-type.application"; };
-		A10 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.riffforge.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphonesimulator;
-				GENERATE_INFOPLIST_FILE = YES;
-				TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0;
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited) ../composeApp/build/bin/iosSimulatorArm64/debugFramework ../shared/build/bin/iosSimulatorArm64/sharedDebugFramework";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				OTHER_LDFLAGS = "$(inherited) -framework composeApp -framework shared";
+
+/* Begin PBXBuildFile section */
+		913A347AA357D41B70357733 /* Pods_RiffForge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 257D8D99E06DD4811CE7D446 /* Pods_RiffForge.framework */; };
+		A1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2 /* AppDelegate.swift */; };
+		B1 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2 /* SceneDelegate.swift */; };
+		G2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = G1 /* GoogleService-Info.plist */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		257D8D99E06DD4811CE7D446 /* Pods_RiffForge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RiffForge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A3 /* RiffForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = RiffForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF6E3D6C02BD00705EA919B9 /* Pods-RiffForge.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RiffForge.debug.xcconfig"; path = "../../Pods/Target Support Files/Pods-RiffForge/Pods-RiffForge.debug.xcconfig"; sourceTree = "<group>"; };
+		B2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		G1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		L1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		L2 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				913A347AA357D41B70357733 /* Pods_RiffForge.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2A18667668268C7A4FB043D6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4564058ED0A26EC21CAA8951 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				257D8D99E06DD4811CE7D446 /* Pods_RiffForge.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A5 = {
+			isa = PBXGroup;
+			children = (
+				A2 /* AppDelegate.swift */,
+				B2 /* SceneDelegate.swift */,
+				L1 /* Info.plist */,
+				L2 /* LaunchScreen.storyboard */,
+				G1 /* GoogleService-Info.plist */,
+				2A18667668268C7A4FB043D6 /* Products */,
+				AE6BF8A5B7345702A20C108A /* Pods */,
+				4564058ED0A26EC21CAA8951 /* Frameworks */,
+			);
+			path = RiffForge;
+			sourceTree = "<group>";
+		};
+		AE6BF8A5B7345702A20C108A /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				AF6E3D6C02BD00705EA919B9 /* Pods-RiffForge.debug.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A7 /* RiffForge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A8 /* Build configuration list for PBXNativeTarget "RiffForge" */;
+			buildPhases = (
+				C4B9A723BCEDCBF92B18A032 /* [CP] Check Pods Manifest.lock */,
+				A4 /* Sources */,
+				C1 /* Resources */,
+				C5 /* Frameworks */,
+				A11 /* Embed and Sign Frameworks */,
+				A548DE12DA0587226B5BF36F /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RiffForge;
+			productName = RiffForge;
+			productReference = A3 /* RiffForge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1620;
+			};
+			buildConfigurationList = A9 /* Build configuration list for PBXProject "RiffForge" */;
+			compatibilityVersion = "Xcode 14.0";
+			mainGroup = A5;
+			productRefGroup = 2A18667668268C7A4FB043D6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A7 /* RiffForge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				G2 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A11 /* Embed and Sign Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Embed and Sign Frameworks";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Embed Compose Multiplatform frameworks\nif [ \"${PLATFORM_NAME}\" = \"iphoneos\" ]; then\n  COMPOSE_FRAMEWORK=\"${SOURCE_ROOT}/../composeApp/build/bin/iosArm64/releaseFramework/composeApp.framework\"\n  SHARED_FRAMEWORK=\"${SOURCE_ROOT}/../shared/build/bin/iosArm64/sharedReleaseFramework/shared.framework\"\nelse\n  COMPOSE_FRAMEWORK=\"${SOURCE_ROOT}/../composeApp/build/bin/iosSimulatorArm64/debugFramework/composeApp.framework\"\n  SHARED_FRAMEWORK=\"${SOURCE_ROOT}/../shared/build/bin/iosSimulatorArm64/sharedDebugFramework/shared.framework\"\nfi\nAPP_FRAMEWORKS=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Frameworks\"\n\nmkdir -p \"${APP_FRAMEWORKS}\"\n\nif [ -d \"${COMPOSE_FRAMEWORK}\" ]; then\n  cp -Rf \"${COMPOSE_FRAMEWORK}\" \"${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: composeApp.framework not found at ${COMPOSE_FRAMEWORK}\"\n  exit 1\nfi\n\nif [ -d \"${SHARED_FRAMEWORK}\" ]; then\n  cp -Rf \"${SHARED_FRAMEWORK}\" \"${APP_FRAMEWORKS}/\"\nelse\n  echo \"Error: shared.framework not found at ${SHARED_FRAMEWORK}\"\n  exit 1\nfi\n\nfor framework in \"${APP_FRAMEWORKS}\"/*.framework; do\n  if [ -f \"${framework}/$(basename \"${framework}\" .framework)\" ]; then\n    codesign --force --sign - \"${framework}\"\n  fi\ndone\n";
+		};
+		A548DE12DA0587226B5BF36F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-RiffForge/Pods-RiffForge-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-RiffForge/Pods-RiffForge-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-RiffForge/Pods-RiffForge-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C4B9A723BCEDCBF92B18A032 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-RiffForge-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1 /* AppDelegate.swift in Sources */,
+				B1 /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AF6E3D6C02BD00705EA919B9 /* Pods-RiffForge.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
 				EXCLUDED_ARCHS = x86_64;
-				}; name = Debug; };
-		A8 = {isa = XCConfigurationList; buildConfigurations = (A10); defaultConfigurationIsVisible = 0; };
-		A9 = {isa = XCConfigurationList; buildConfigurations = (A10); defaultConfigurationIsVisible = 0; };
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					../composeApp/build/bin/iosArm64/releaseFramework,
+					../shared/build/bin/iosArm64/sharedReleaseFramework,
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					../composeApp/build/bin/iosSimulatorArm64/debugFramework,
+					../shared/build/bin/iosSimulatorArm64/sharedDebugFramework,
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RiffForge/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					composeApp,
+					"-framework",
+					shared,
+					"-framework",
+					PhotosUI,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.riffforge.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A8 /* Build configuration list for PBXNativeTarget "RiffForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		A9 /* Build configuration list for PBXProject "RiffForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
 	};
-	rootObject = A6;
+	rootObject = A6 /* Project object */;
 }
