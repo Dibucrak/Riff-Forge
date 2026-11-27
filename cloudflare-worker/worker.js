@@ -36,6 +36,147 @@ function looksLikeUrl(rawInput) {
   return /^https?:\/\//i.test(rawInput) || /youtu(\.be|be\.com)/i.test(rawInput);
 }
 
+function cleanTrackText(text) {
+  let cleaned = String(text || "");
+  cleaned = cleaned.replace(/\|.*$/g, "");
+  cleaned = cleaned.replace(
+    /\((?:official\s*(?:music\s*)?(?:video|audio|lyric\s*video|visualizer)|lyrics?|letra|audio|hd|4k|remastered[^)]*|live[^)]*|en\s+vivo[^)]*|video\s+oficial)\)/gi,
+    " "
+  );
+  cleaned = cleaned.replace(
+    /\[(?:official\s*(?:music\s*)?(?:video|audio|lyric\s*video|visualizer)|lyrics?|letra|audio|hd|4k|remastered[^\]]*|live[^\]]*|en\s+vivo[^\]]*|video\s+oficial)\]/gi,
+    " "
+  );
+  cleaned = cleaned.replace(/\b(?:VEVO|Official)\b/gi, " ");
+  cleaned = cleaned.replace(/\s*-\s*Topic\b/gi, "");
+  cleaned = cleaned.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ");
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+
+function trimLyricsForPrompt(rawLyrics, maxChars = 2200) {
+  const normalized = String(rawLyrics || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (!normalized || normalized.length <= maxChars) {
+    return normalized;
+  }
+  const slice = normalized.slice(0, maxChars);
+  const lastParagraphBreak = slice.lastIndexOf("\n\n");
+  if (lastParagraphBreak >= Math.floor(maxChars * 0.55)) {
+    return slice.slice(0, lastParagraphBreak).trim();
+  }
+  const lastLineBreak = slice.lastIndexOf("\n");
+  if (lastLineBreak >= Math.floor(maxChars * 0.55)) {
+    return slice.slice(0, lastLineBreak).trim();
+  }
+  return slice.trim();
+}
+
+async function fetchRealLyrics(videoTitle, channelAuthor, rawInput) {
+  const cleanTitle = cleanTrackText(videoTitle);
+  const cleanAuthor = cleanTrackText(channelAuthor);
+  const cleanRaw = looksLikeUrl(rawInput) ? "" : cleanTrackText(rawInput);
+
+  const queries = [];
+  if (cleanTitle) {
+    if (cleanAuthor && !cleanTitle.toLowerCase().includes(cleanAuthor.toLowerCase())) {
+      queries.push(`${cleanAuthor} ${cleanTitle}`);
+    }
+    queries.push(cleanTitle);
+  }
+  if (cleanRaw && !queries.includes(cleanRaw)) {
+    queries.push(cleanRaw);
+  }
+
+  const titleWords = (cleanTitle || cleanRaw)
+    .toLowerCase()
+    .split(/[^a-z0-9áéíóúñü]+/i)
+    .filter((w) => w.length >= 3);
+
+  for (const query of queries.slice(0, 2)) {
+    try {
+      const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+      const resp = await fetch(searchUrl, {
+        headers: {
+          "User-Agent": "RiffForge-AI/1.2 (+https://github.com/Dibucrak/Riff-Forge)",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(4500),
+      });
+      if (!resp.ok) continue;
+      const results = await resp.json();
+      if (!Array.isArray(results) || results.length === 0) continue;
+
+      const candidates = results.filter(
+        (item) => item && item.instrumental !== true && typeof item.plainLyrics === "string" && item.plainLyrics.trim().length > 20
+      );
+      if (candidates.length === 0) continue;
+
+      let best = candidates[0];
+      if (titleWords.length > 0) {
+        let bestScore = -1;
+        for (const item of candidates) {
+          const hay = `${item.trackName || ""} ${item.artistName || ""} ${item.name || ""}`.toLowerCase();
+          let score = 0;
+          for (const word of titleWords) {
+            if (hay.includes(word)) score += 1;
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            best = item;
+          }
+        }
+      }
+
+      const trimmed = trimLyricsForPrompt(best.plainLyrics, 2200);
+      if (trimmed) {
+        return trimmed;
+      }
+    } catch {
+      // Silently fallback so the AI endpoint never breaks if LRCLIB times out
+    }
+  }
+  return "";
+}
+
+function escapeLiteralNewlinesInStrings(jsonText) {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < jsonText.length; i++) {
+    const ch = jsonText[i];
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === "\"") {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+    if (inString && ch === "\n") {
+      out += "\\n";
+      continue;
+    }
+    if (inString && ch === "\r") {
+      continue;
+    }
+    if (inString && ch === "\t") {
+      out += "\\t";
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 function parseAiJson(rawOutput) {
   if (rawOutput && typeof rawOutput === "object" && !Array.isArray(rawOutput)) {
     return rawOutput;
@@ -47,7 +188,11 @@ function parseAiJson(rawOutput) {
   if (firstBrace >= 0 && lastBrace > firstBrace) {
     text = text.slice(firstBrace, lastBrace + 1);
   }
-  return JSON.parse(text);
+  try {
+    return JSON.parse(text);
+  } catch {
+    return JSON.parse(escapeLiteralNewlinesInStrings(text));
+  }
 }
 
 export default {
@@ -127,19 +272,25 @@ export default {
         }
       }
 
+      const fetchedLyrics = await fetchRealLyrics(videoTitle, channelAuthor, rawInput);
+
       const targetDescription = videoId
         ? `Video de YouTube:\n- Título del video: "${videoTitle}"\n- Canal/Artista en YouTube: "${channelAuthor}"\n- URL: ${youtubeUrl}`
         : `Canción / consulta ingresada por el músico: "${rawInput}"`;
 
+      const lyricsInstructionBlock = fetchedLyrics
+        ? `\n\nLetra real de referencia (conserva estos versos en su idioma original y coloca los acordes [Acorde] exactamente antes de la palabra o sílaba donde cambia cada acorde):\n${fetchedLyrics}`
+        : `\n\nIncluye la letra real conocida de la canción en su idioma original con los acordes [Acorde] colocados inline exactamente antes de la palabra o sílaba donde cambia cada acorde (si es puramente instrumental, detalla la estructura por secciones y compases).`;
+
       const systemPrompt =
-        "Eres un guitarrista profesional y director musical experto en armonía para guitarra. " +
-        "Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni texto extra). " +
-        "Usa cifrado americano estándar para los nombres de acordes (C, Am, Fmaj7, Dsus4, E7, F#m, Bb) porque la app los transpone automáticamente. " +
-        "NO reproduzcas letras completas con copyright; usa únicamente guías breves de estructura musical y frases cortas de referencia con acordes entre corchetes como [Em7] [G] [Dsus4] [A7sus4].";
+        "Eres un guitarrista profesional y transcriptor experto de cifrados ChordPro. " +
+        "Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin bloques ``` ni texto fuera del JSON; usa \\n escapado dentro de strings JSON). " +
+        "Usa cifrado americano estándar para los nombres de acordes (C, Am, Em7, Dsus4, E7, F#m, Bb) porque la app los transpone automáticamente. " +
+        "Debes incluir la letra real de la canción en su idioma original dentro de \"content\" con los acordes entre corchetes [Acorde] colocados exactamente antes de la palabra o sílaba donde cambia cada acorde, organizada por secciones ([Intro], [Verso 1], [Pre-Coro], [Coro], [Verso 2], [Puente], [Outro]).";
 
       const userPrompt = `${targetDescription}
 Estilo/Enfoque solicitado: ${styleHint}
-Idioma de explicaciones: ${language === "es" ? "Español" : "English"}
+Idioma de explicaciones: ${language === "es" ? "Español" : "English"}${lyricsInstructionBlock}
 
 Devuelve exactamente un JSON con esta estructura:
 {
@@ -152,7 +303,7 @@ Devuelve exactamente un JSON con esta estructura:
   "difficulty": "Fácil | Intermedio | Avanzado",
   "strummingPattern": "Patrón rítmico breve en español, ej. D - D U - U D U",
   "chords": ["Em7", "G", "Dsus4", "A7sus4"],
-  "content": "[Intro]\\n[Em7] [G] [Dsus4] [A7sus4]\\n\\n[Verso]\\n[Em7] Entrada suave [G] marca el compás\\n[Dsus4] Mantén la tensión [A7sus4] antes de resolver\\n\\n[Coro]\\n[Cadd9] [G] [D] [Em7] (rasgueo abierto)",
+  "content": "[Intro]\\n[Em7] [G] [Dsus4] [A7sus4]\\n\\n[Verso 1]\\n[Em7] Today is gonna be the [G] day that they're gonna throw it [Dsus4] back to [A7sus4] you\\n...",
   "practiceTip": "Consejo práctico en 1-2 oraciones en español (escala sugerida para improvisar, dinámica o digitación clave)."
 }`;
 
@@ -162,8 +313,8 @@ Devuelve exactamente un JSON con esta estructura:
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 1400,
-          temperature: 0.25,
+          max_tokens: 3000,
+          temperature: 0.2,
         });
 
         const parsed = parseAiJson(aiResult?.response ?? aiResult);
@@ -200,6 +351,8 @@ Devuelve exactamente un JSON con esta estructura:
           chords: chords.length > 0 ? chords : [key],
           content,
           practiceTip,
+          hasLyrics: Boolean(fetchedLyrics || content.split("\n").length > 6),
+          lyricsSource: fetchedLyrics ? "lrclib" : "llm",
           youtubeUrl,
           youtubeVideoId: videoId || "",
           thumbnailUrl,
