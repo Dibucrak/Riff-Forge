@@ -16,5 +16,6 @@ data class AiChordsResult(
     val youtubeVideoId: String = "",
     val thumbnailUrl: String = "",
     val videoTitle: String = "",
-    val model: String = ""
+    val model: String = "",
+    val chordSource: String = ""
 )

@@ -228,6 +228,8 @@
 					shared,
 					"-framework",
 					PhotosUI,
+					"-framework",
+					WebKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.riffforge.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";

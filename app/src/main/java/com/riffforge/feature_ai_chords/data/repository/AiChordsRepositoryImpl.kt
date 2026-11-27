@@ -81,7 +81,8 @@ class AiChordsRepositoryImpl @Inject constructor() : AiChordsRepository {
                         youtubeVideoId = json.optString("youtubeVideoId", ""),
                         thumbnailUrl = json.optString("thumbnailUrl", ""),
                         videoTitle = json.optString("videoTitle", ""),
-                        model = json.optString("model", "")
+                        model = json.optString("model", ""),
+                        chordSource = json.optString("chordSource", "")
                     )
                 )
             }

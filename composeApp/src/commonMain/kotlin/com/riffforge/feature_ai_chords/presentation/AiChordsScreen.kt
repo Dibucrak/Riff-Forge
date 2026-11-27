@@ -360,23 +360,36 @@ fun AiChordsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            if (result.youtubeVideoId.isNotBlank()) {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer
-                                ) {
-                                    Text(
-                                        text = "YouTube",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
+                            val isVerified = result.chordSource in setOf("lacuerda", "guitaretab", "gemini_audio", "gemini_search")
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isVerified) {
+                                    SystemGreen.copy(alpha = 0.16f)
+                                } else {
+                                    MaterialTheme.colorScheme.surface
                                 }
+                            ) {
+                                Text(
+                                    text = if (isVerified) "Acordes verificados" else "Estimado IA",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isVerified) {
+                                        SystemGreen
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
                         }
 
-                        if (result.videoTitle.isNotBlank()) {
+                        if (result.youtubeVideoId.isNotBlank()) {
+                            YouTubeInlinePlayer(
+                                videoId = result.youtubeVideoId,
+                                videoTitle = result.videoTitle,
+                                youtubeUrl = result.youtubeUrl
+                            )
+                        } else if (result.videoTitle.isNotBlank()) {
                             Text(
                                 text = "Video detectado: ${result.videoTitle}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -470,7 +483,11 @@ fun AiChordsScreen(
                                     lineHeight = 19.sp
                                 ),
                                 color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(14.dp)
+                                softWrap = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(14.dp)
                             )
                         }
 
