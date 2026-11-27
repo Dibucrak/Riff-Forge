@@ -8,5 +8,6 @@ data class AiChordsState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val result: AiChordsResult? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val savedSongId: Int? = null
 )

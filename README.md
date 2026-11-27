@@ -11,7 +11,7 @@
 [![Compose](https://img.shields.io/badge/Compose-Multiplatform-orange.svg)](https://developer.android.com/jetpack/compose)
 [![iOS](https://img.shields.io/badge/iOS-15.0+-000000.svg)](https://developer.apple.com/ios/)
 [![Android](https://img.shields.io/badge/Android-8.0+-3DDC84.svg)](https://developer.android.com)
-[![Cloudflare Workers AI](https://img.shields.io/badge/Workers%20AI-Llama%203.3%2070B-F38020.svg)](https://developers.cloudflare.com/workers-ai/)
+[![Cloudflare Workers AI](https://img.shields.io/badge/Workers%20AI-Gemma%204%2026B-F38020.svg)](https://developers.cloudflare.com/workers-ai/)
 
 </div>
 
@@ -32,7 +32,7 @@ Guitarists and music students constantly jump across disconnected, ad-heavy, or 
 
 ## 🎸 Features
 
-- **AI Chords (YouTube → Acordes)** — Paste any YouTube URL or pick quick demos, select an arrangement focus (`Original`, `Acústica`, `Principiante`, `Rock`), extract key, BPM, capo, tuning, strumming pattern, chord chips, structured song sheet, and practice tips, and save directly to **Mi Repertorio**.
+- **AI Chords (YouTube → Acordes)** — Paste any YouTube URL or song query, choose **`Original`** or **`Simplificado`** (automatic open-chord + optimal capo transposition), inspect key, BPM, capo, tuning, strumming pattern, over-lyric chords aligned above real lyrics, and save directly to **Mi Repertorio** with one-tap **Ver canción** / **Editar** actions.
 - **Chromatic Tuner** — Real-time pitch detection (`440 Hz`) with string selector and multiple tunings (`Standard`, `Drop D`, `DADGAD`, etc.).
 - **Smart Metronome** — BPM control (`40–240`), time signature accents (`2/4`, `3/4`, `4/4`, `6/8`), tap tempo, and synthesized sound profiles (`Madera / Classic`, `Mecánico`, `Suave`).
 - **Chord Dictionary** — Interactive chord library with Canvas fretboard diagrams, fingerings, and synthesized audio playback.
@@ -45,17 +45,17 @@ Guitarists and music students constantly jump across disconnected, ad-heavy, or 
 
 ## 🤖 AI Integration (`AI Chords · YouTube`)
 
-RiffForge avoids bundling any third-party LLM API keys inside mobile binaries by routing requests through an edge microservice on **Cloudflare Workers** (`cloudflare-worker/`):
+RiffForge avoids bundling any third-party LLM API keys inside mobile binaries by routing requests through a serverless 2-stage pipeline on **Cloudflare Workers** (`cloudflare-worker/`):
 
-1. **YouTube Metadata Resolution**: When the user submits a YouTube URL (`youtube.com/watch?v=...` or `youtu.be/...`) or song title, the Worker resolves official track/channel metadata via YouTube `oEmbed`.
-2. **Serverless LLM Inference**: The Worker invokes **Cloudflare Workers AI** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) via a private server-side `AI` binding to return structured JSON (`title`, `artist`, `key`, `bpm`, `tuning`, `capo`, `difficulty`, `strummingPattern`, `chords[]`, `progressionText`, `practiceTip`).
-3. **Notation & Persistence**: Both native Android (`app/` via `OkHttp`) and KMP/iOS (`composeApp/` via `NSURLSession` / `HttpURLConnection`) automatically transpose chords to the user's selected notation (`Americano` or `Latino`) and store the generated sheet in **Mi Repertorio**.
+1. **YouTube & Lyrics Resolution (Parallel Stage 1)**: Resolves official track/channel metadata via YouTube `oEmbed`, fetches real song lyrics via **LRCLIB**, and extracts verified studio harmony (`key`, `tuning`, `capo`, `bpm`, section progressions) using **Cloudflare Workers AI** (`@cf/google/gemma-4-26b-a4b-it`, with automatic fallback to `@cf/openai/gpt-oss-120b`).
+2. **Lyric Alignment & Over-Lyric Formatting**: `@cf/meta/llama-3.3-70b-instruct-fp8-fast` aligns the verified chords to real song verses, then deterministic server post-processing converts the sheet into standard **chords-above-lyrics** layout wrapped cleanly for mobile screens. For **`Simplificado`** mode, a deterministic chord simplifier evaluates capo shifts (`0–7`) to minimize barre chords while keeping the true pitch.
+3. **Notation, Persistence & Direct Editing**: Both native Android (`app/` via `OkHttp`) and KMP/iOS (`composeApp/` via `NSURLSession` / `HttpURLConnection`) transpose chords automatically (`Americano` / `Latino`), save into **Mi Repertorio**, and unlock immediate **Ver canción** and **Editar** buttons.
 
 ### How to Test AI Chords in the App
 1. Open **RiffForge** and go to the **Herramientas** tab (bottom bar).
 2. Under **Práctica & IA**, tap **AI Chords (YouTube)**.
-3. Tap a quick YouTube sample chip (e.g., **Oasis · Wonderwall**) or paste any YouTube URL / `"Song - Artist"`, and optionally pick an arrangement focus (`Original`, `Acústica`, `Principiante`, `Rock`).
-4. Tap **Extraer Acordes con IA** — wait a few seconds for the live AI analysis, then tap **Guardar en Mi Repertorio** to save it offline and access it from **Canciones**.
+3. Paste any YouTube URL (e.g., `https://www.youtube.com/watch?v=6hzrDeceEKc`) or `"Song - Artist"`, and choose **`Original`** or **`Simplificado`**.
+4. Tap **Extraer Acordes con IA** — inspect the chords above the lyrics, tap **Guardar en Mi Repertorio**, and use **Ver canción** or **Editar** directly.
 
 ---
 
@@ -69,7 +69,7 @@ RiffForge uses a **Kotlin Multiplatform (KMP)** architecture combining Clean Arc
 | `composeApp/` | KMP (Android + iOS) | Shared Compose Multiplatform UI, Voyager (`ScreenModel`), Koin, `multiplatform-settings`, native `NSURLSession` & `AudioSynth` |
 | `shared/` | KMP (`commonMain`) | Shared domain models, chord/scale catalogs, and harmonic transposer |
 | `iosApp/` | Native iOS (Swift) | SwiftUI/UIKit host (`iOS 15.0+`), CocoaPods (`FirebaseAuth`, `FirebaseFirestore`), `PHPicker` profile photo bridge |
-| `cloudflare-worker/` | Cloudflare Edge | Free-tier Cloudflare Worker + Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) proxy for AI Chords |
+| `cloudflare-worker/` | Cloudflare Edge | Free-tier Cloudflare Worker orchestrating Gemma 4 26B (`@cf/google/gemma-4-26b-a4b-it`), LRCLIB lyrics, Llama 3.3 70B alignment, and over-lyric formatting |
 
 ### Design
 Built with Material 3 and **Liquid Glass** floating navigation aesthetics, customizable dark/light presets, and seamless bilingual chord notation (`C D E` / `Do Re Mi`).

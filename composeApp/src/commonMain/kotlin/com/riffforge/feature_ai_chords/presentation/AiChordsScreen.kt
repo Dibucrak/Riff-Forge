@@ -23,11 +23,11 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -58,33 +58,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.riffforge.core.domain.util.AppSettings
 import com.riffforge.core.domain.util.NotationConverter
 import com.riffforge.core.presentation.theme.SystemGreen
 import kotlinx.coroutines.flow.collectLatest
 
-private data class YouTubeDemoSample(
-    val label: String,
-    val url: String
-)
-
-private val kmpDemoSamples = listOf(
-    YouTubeDemoSample("Oasis · Wonderwall", "https://www.youtube.com/watch?v=6hzrDeceEKc"),
-    YouTubeDemoSample("Radiohead · Creep", "https://www.youtube.com/watch?v=XFkzRNyygfk"),
-    YouTubeDemoSample("Soda Stereo · De Música Ligera", "https://www.youtube.com/watch?v=OX-us7PEfkc")
-)
-
-private val kmpStyleOptions = listOf("Original", "Acústica", "Principiante", "Rock")
+private val kmpStyleOptions = listOf("Original", "Simplificado")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AiChordsScreen(
     viewModel: AiChordsViewModel,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    onOpenSong: (String) -> Unit = {},
+    onEditSong: (String) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -196,17 +192,15 @@ fun AiChordsScreen(
                     )
 
                     Text(
-                        text = "Enfoque de arreglo",
+                        text = "Versión de acordes",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold
                     )
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         kmpStyleOptions.forEach { option ->
                             val selected = state.styleHint == option
@@ -219,48 +213,6 @@ fun AiChordsScreen(
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                 )
                             )
-                        }
-                    }
-
-                    Text(
-                        text = "Ejemplos rápidos de YouTube",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        kmpDemoSamples.forEach { sample ->
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { viewModel.applySample(sample.url) }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayCircle,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = sample.label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
                         }
                     }
 
@@ -494,15 +446,28 @@ fun AiChordsScreen(
                             }
                         }
 
+                        val chordColor = MaterialTheme.colorScheme.primary
+                        val sectionColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        val highlightedSheet = remember(formattedContent, useSpanish, chordColor, sectionColor) {
+                            buildHighlightedKmpSheet(
+                                content = formattedContent,
+                                useSpanish = useSpanish,
+                                chordColor = chordColor,
+                                sectionColor = sectionColor
+                            )
+                        }
+
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             color = MaterialTheme.colorScheme.surface
                         ) {
                             Text(
-                                text = formattedContent,
+                                text = highlightedSheet,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp,
+                                    lineHeight = 19.sp
                                 ),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(14.dp)
@@ -559,11 +524,92 @@ fun AiChordsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+
+                        val savedId = state.savedSongId
+                        if (state.isSaved && !savedId.isNullOrBlank()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { onOpenSong(savedId) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Ver canción", fontWeight = FontWeight.SemiBold)
+                                }
+                                OutlinedButton(
+                                    onClick = { onEditSong(savedId) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Editar", fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(96.dp))
+        }
+    }
+}
+
+private val kmpAmericanChordRegex = Regex(
+    """(?<![A-Za-z])([A-G](?:#|b)?(?:(?:maj|min|dim|aug|sus|add|alt|dom|m|M)?(?:\d+)?(?:sus[24]|add\d+|b\d|#\d|[+-])?){0,3}(?:/[A-G](?:#|b)?)?)(?![A-Za-z0-9#b])"""
+)
+private val kmpSpanishChordRegex = Regex(
+    """(?<![A-Za-z])((?:Sol|Do|Re|Mi|Fa|La|Si)(?:#|b)?(?:(?:maj|min|dim|aug|sus|add|alt|dom|m|M)?(?:\d+)?(?:sus[24]|add\d+|b\d|#\d|[+-])?){0,3}(?:/(?:Sol|Do|Re|Mi|Fa|La|Si)(?:#|b)?)?)(?![A-Za-z0-9#b])"""
+)
+
+private fun buildHighlightedKmpSheet(
+    content: String,
+    useSpanish: Boolean,
+    chordColor: Color,
+    sectionColor: Color
+): AnnotatedString {
+    val chordRegex = if (useSpanish) kmpSpanishChordRegex else kmpAmericanChordRegex
+    return buildAnnotatedString {
+        val lines = content.split("\n")
+        lines.forEachIndexed { lineIdx, line ->
+            val lineStart = length
+            append(line)
+            val trimmed = line.trim()
+            if (trimmed.startsWith("[") && trimmed.endsWith("]") && trimmed.length <= 36) {
+                addStyle(
+                    style = SpanStyle(color = sectionColor, fontWeight = FontWeight.SemiBold),
+                    start = lineStart,
+                    end = lineStart + line.length
+                )
+            } else if (trimmed.isNotEmpty()) {
+                val words = trimmed.split(Regex("""\s+""")).filter { it.isNotEmpty() }
+                val chordRatio = if (words.isNotEmpty()) {
+                    words.count { chordRegex.matches(it) }.toFloat() / words.size
+                } else 0f
+                if (chordRatio >= 0.45f) {
+                    chordRegex.findAll(line).forEach { match ->
+                        addStyle(
+                            style = SpanStyle(color = chordColor, fontWeight = FontWeight.Bold),
+                            start = lineStart + match.range.first,
+                            end = lineStart + match.range.last + 1
+                        )
+                    }
+                }
+            }
+            if (lineIdx < lines.lastIndex) append("\n")
         }
     }
 }

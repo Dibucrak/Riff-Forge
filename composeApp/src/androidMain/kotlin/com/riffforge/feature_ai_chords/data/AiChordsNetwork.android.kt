@@ -13,7 +13,7 @@ actual suspend fun postAiChordsJson(url: String, jsonBody: String): Result<AiHtt
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000
-                readTimeout = 45_000
+                readTimeout = 75_000
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 setRequestProperty("Accept", "application/json")

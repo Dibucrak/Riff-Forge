@@ -41,12 +41,6 @@ class AiChordsViewModel @Inject constructor(
             is AiChordsEvent.StyleChanged -> {
                 _state.value = state.value.copy(styleHint = event.styleHint)
             }
-            is AiChordsEvent.ApplySample -> {
-                _state.value = state.value.copy(
-                    input = event.sampleInput,
-                    error = null
-                )
-            }
             is AiChordsEvent.ExtractChords -> extractChords()
             is AiChordsEvent.SaveToRepertoire -> saveToRepertoire()
         }
@@ -66,7 +60,8 @@ class AiChordsViewModel @Inject constructor(
             _state.value = state.value.copy(
                 isLoading = true,
                 error = null,
-                isSaved = false
+                isSaved = false,
+                savedSongId = null
             )
             val res = repository.extractChords(
                 input = query,
@@ -78,7 +73,8 @@ class AiChordsViewModel @Inject constructor(
                         isLoading = false,
                         result = extracted,
                         error = null,
-                        isSaved = false
+                        isSaved = false,
+                        savedSongId = null
                     )
                 },
                 onFailure = { err ->
@@ -98,12 +94,15 @@ class AiChordsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val existing = songUseCases.getSongs().first()
-                val alreadyExists = existing.any {
+                val existingMatch = existing.firstOrNull {
                     it.title.trim().equals(current.title.trim(), ignoreCase = true) &&
                         it.artist.trim().equals(current.artist.trim(), ignoreCase = true)
                 }
-                if (alreadyExists) {
-                    _state.value = state.value.copy(isSaved = true)
+                if (existingMatch != null) {
+                    _state.value = state.value.copy(
+                        isSaved = true,
+                        savedSongId = existingMatch.id
+                    )
                     _eventFlow.emit(UiEvent.ShowSnackbar("\"${current.title}\" ya está en Mi Repertorio."))
                     return@launch
                 }
@@ -133,7 +132,14 @@ class AiChordsViewModel @Inject constructor(
                         isDraft = false
                     )
                 )
-                _state.value = state.value.copy(isSaved = true)
+                val insertedId = songUseCases.getSongs().first().lastOrNull {
+                    it.title.trim().equals(current.title.trim(), ignoreCase = true) &&
+                        it.artist.trim().equals(current.artist.trim(), ignoreCase = true)
+                }?.id
+                _state.value = state.value.copy(
+                    isSaved = true,
+                    savedSongId = insertedId
+                )
                 _eventFlow.emit(UiEvent.ShowSnackbar("\"${current.title}\" guardada en Mi Repertorio."))
             } catch (e: Exception) {
                 _eventFlow.emit(UiEvent.ShowSnackbar("Error al guardar: ${e.message ?: "intenta de nuevo"}"))

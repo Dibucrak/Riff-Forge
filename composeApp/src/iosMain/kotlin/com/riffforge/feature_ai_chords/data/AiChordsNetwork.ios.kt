@@ -11,6 +11,7 @@ import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSURLSessionConfiguration
 import platform.Foundation.create
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.setHTTPBody
@@ -50,7 +51,12 @@ actual suspend fun postAiChordsJson(url: String, jsonBody: String): Result<AiHtt
             setValue("application/json", forHTTPHeaderField = "Accept")
             setHTTPBody(jsonBody.encodeToByteArray().toNSData())
         }
-        val task = NSURLSession.sharedSession.dataTaskWithRequest(request) { data, response, error ->
+        val config = NSURLSessionConfiguration.defaultSessionConfiguration.apply {
+            timeoutIntervalForRequest = 75.0
+            timeoutIntervalForResource = 75.0
+        }
+        val session = NSURLSession.sessionWithConfiguration(config)
+        val task = session.dataTaskWithRequest(request) { data, response, error ->
             if (!cont.isActive) return@dataTaskWithRequest
             if (error != null) {
                 cont.resume(

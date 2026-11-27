@@ -7,6 +7,8 @@ import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.riffforge.feature_songs.presentation.AddEditSongToolScreen
+import com.riffforge.feature_songs.presentation.SongViewerToolScreen
 import com.riffforge.feature_ai_chords.presentation.AiChordsScreen
 import com.riffforge.feature_ai_chords.presentation.AiChordsViewModel
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
@@ -133,7 +135,9 @@ class AiChordsToolScreen() : Screen {
         val viewModel = rememberScreenModel { AiChordsViewModel() }
         AiChordsScreen(
             viewModel = viewModel,
-            onNavigateUp = { navigator.pop() }
+            onNavigateUp = { navigator.pop() },
+            onOpenSong = { songId -> navigator.push(SongViewerToolScreen(songId = songId)) },
+            onEditSong = { songId -> navigator.push(AddEditSongToolScreen(songId = songId)) }
         )
     }
 }

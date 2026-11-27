@@ -19,7 +19,8 @@ data class AiChordsUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val result: AiChordsResult? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val savedSongId: String? = null
 )
 
 class AiChordsViewModel(
@@ -40,10 +41,6 @@ class AiChordsViewModel(
         _state.update { it.copy(styleHint = styleHint) }
     }
 
-    fun applySample(sampleUrl: String) {
-        _state.update { it.copy(input = sampleUrl, error = null) }
-    }
-
     fun extractChords() {
         val query = _state.value.input.trim()
         if (query.isBlank()) {
@@ -55,7 +52,7 @@ class AiChordsViewModel(
         if (_state.value.isLoading) return
 
         screenModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null, isSaved = false) }
+            _state.update { it.copy(isLoading = true, error = null, isSaved = false, savedSongId = null) }
             val res = repository.extractChords(input = query, styleHint = _state.value.styleHint)
             res.fold(
                 onSuccess = { extracted ->
@@ -64,7 +61,8 @@ class AiChordsViewModel(
                             isLoading = false,
                             result = extracted,
                             error = null,
-                            isSaved = false
+                            isSaved = false,
+                            savedSongId = null
                         )
                     }
                 },
@@ -84,13 +82,13 @@ class AiChordsViewModel(
         val current = _state.value.result ?: return
         if (_state.value.isSaved) return
 
-        val alreadyExists = RepertoireStore.songs.any {
+        val existingMatch = RepertoireStore.songs.firstOrNull {
             it.title.trim().equals(current.title.trim(), ignoreCase = true) &&
                 it.artist.trim().equals(current.artist.trim(), ignoreCase = true)
         }
 
-        if (alreadyExists) {
-            _state.update { it.copy(isSaved = true) }
+        if (existingMatch != null) {
+            _state.update { it.copy(isSaved = true, savedSongId = existingMatch.id) }
             screenModelScope.launch {
                 _snackbarFlow.emit("\"${current.title}\" ya está en Mi Repertorio.")
             }
@@ -111,7 +109,7 @@ class AiChordsViewModel(
             append(current.content)
         }
 
-        RepertoireStore.saveSong(
+        val saved = RepertoireStore.saveSong(
             id = null,
             title = current.title,
             artist = current.artist,
@@ -120,7 +118,7 @@ class AiChordsViewModel(
             bpm = current.bpm,
             lyricsAndChords = fullContent
         )
-        _state.update { it.copy(isSaved = true) }
+        _state.update { it.copy(isSaved = true, savedSongId = saved.id) }
         screenModelScope.launch {
             _snackbarFlow.emit("\"${current.title}\" guardada en Mi Repertorio.")
         }

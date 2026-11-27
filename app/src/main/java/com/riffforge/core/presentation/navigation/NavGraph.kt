@@ -136,7 +136,13 @@ fun NavGraph(
 
         composable(route = Screen.AiChords.route) {
             com.riffforge.feature_ai_chords.presentation.AiChordsScreen(
-                onNavigateUp = { navController.navigateUp() }
+                onNavigateUp = { navController.navigateUp() },
+                onOpenSong = { songId ->
+                    navController.navigate(Screen.SongViewer.route + "/$songId?setId=-1")
+                },
+                onEditSong = { songId ->
+                    navController.navigate(Screen.AddEditSong.route + "?songId=$songId")
+                }
             )
         }
 
