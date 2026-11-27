@@ -102,4 +102,7 @@ object ChordLibrary {
         Chord(id = "B_dim", root = "B", type = "Dim", difficulty = "Media", stringFrets = listOf(-1, 2, 3, 1, 3, -1), fingers = listOf(0, 2, 3, 1, 4, 0), isBarre = false, startingFret = 1),
         Chord(id = "B_aug", root = "B", type = "Aug", difficulty = "Media", stringFrets = listOf(-1, 2, 1, 0, 0, 3), fingers = listOf(0, 2, 1, 0, 0, 3), isBarre = false, startingFret = 1)
     )
+
+    fun getChord(root: String, type: String): Chord? =
+        chords.find { it.root.equals(root, ignoreCase = true) && it.type.equals(type, ignoreCase = true) }
 }

@@ -3,153 +3,244 @@ package com.riffforge.feature_theory.presentation.scales
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
-import com.riffforge.feature_theory.domain.model.Scale
-import com.riffforge.feature_theory.domain.util.ScaleLibrary
+import com.riffforge.core.audio.AudioSynth
+import com.riffforge.core.domain.util.AppSettings
+import com.riffforge.core.domain.util.NotationConverter
+import com.riffforge.core.presentation.theme.SystemGreen
+import com.riffforge.shared.domain.util.ScaleLibrary
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-/**
- * Liquid Glass Scales Screen — scale builder with frosted glass aesthetic.
- *
- * Visual design:
- *   - Full-screen vibrant gradient background with ambient glow orbs
- *   - Frosted glass header bar with back button
- *   - Root and scale type selectors use glass chips with accent colors
- *   - Scale details card uses elevated glass panel
- *   - Fretboard canvas uses cyan/purple accent colors for notes
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScalesScreen(
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit = {}
 ) {
-    var selectedRoot by remember { mutableStateOf("C") }
-    var selectedScale by remember { mutableStateOf(ScaleLibrary.scales[0]) }
+    val useSpanish = AppSettings.useSpanishNotation
+    var selectedRoot by rememberSaveable { mutableStateOf("A") }
+    var selectedScaleName by rememberSaveable { mutableStateOf("Pentatónica Menor") }
 
-    val rootIndex = ScaleLibrary.roots.indexOf(selectedRoot)
-    val targetNotesIndices = selectedScale.intervals.map { (rootIndex + it) % 12 }
+    val currentScale = remember(selectedScaleName) {
+        ScaleLibrary.scales.find { it.name == selectedScaleName } ?: ScaleLibrary.scales.first()
+    }
 
-    GlassBackground {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var playbackJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    val rootMidiMap = mapOf(
+        "C" to 48, "C#" to 49, "D" to 50, "D#" to 51,
+        "E" to 52, "F" to 53, "F#" to 54, "G" to 55,
+        "G#" to 56, "A" to 57, "A#" to 58, "B" to 59
+    )
+
+    val greenColor = SystemGreen
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Escalas y Modos", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // ── Header Bar ───────────────────────────────────────────
-            item {
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    cornerRadius = 16.dp
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Root Selector Card ──────────────────────────────
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Tónica",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(ScaleLibrary.roots) { root ->
+                                val isSelected = root == selectedRoot
+                                val displayRoot = NotationConverter.formatChord(root, useSpanish)
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surface
+                                        )
+                                        .clickable { selectedRoot = root },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = displayRoot,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Scale Type Selector Card ────────────────────────
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Escala / Modo",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        val scaleListState = rememberLazyListState()
+                        LaunchedEffect(selectedScaleName) {
+                            val idx = ScaleLibrary.scales.indexOfFirst { it.name == selectedScaleName }
+                            if (idx >= 0) {
+                                scaleListState.animateScrollToItem(idx)
+                            }
+                        }
+                        LazyRow(
+                            state = scaleListState,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(ScaleLibrary.scales) { scale ->
+                                val isSelected = scale.name == selectedScaleName
+                                Box(
+                                    modifier = Modifier
+                                        .height(42.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surface
+                                        )
+                                        .clickable { selectedScaleName = scale.name }
+                                        .padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = scale.name,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Scale Info Card ─────────────────────────────────
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
+                        modifier = Modifier.padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = onNavigateUp,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = AccentTint.copy(alpha = 0.3f)
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            val displayRoot = NotationConverter.formatChord(selectedRoot, useSpanish)
+                            Text(
+                                text = "$displayRoot ${currentScale.name}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
                             )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Regresar",
-                                tint = AccentTint
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = currentScale.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Constructor de Escalas",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = TextOnGlassPrimary
-                        )
-                    }
-                }
-            }
-
-            item {
-                // ── Root Selector ─────────────────────────────────────
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(ScaleLibrary.roots) { root ->
-                        val isSelected = selectedRoot == root
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) AccentTint else GlassSurfaceDim)
-                                .clickable { selectedRoot = root },
-                            contentAlignment = Alignment.Center
+                        FilledTonalIconButton(
+                            onClick = {
+                                playbackJob?.cancel()
+                                playbackJob = scope.launch {
+                                    val baseMidi = rootMidiMap[selectedRoot] ?: 57
+                                    for (interval in currentScale.intervals) {
+                                        AudioSynth.playMidiNote(baseMidi + interval, 220)
+                                        delay(200)
+                                    }
+                                    AudioSynth.playMidiNote(baseMidi + 12, 320)
+                                }
+                            }
                         ) {
-                            Text(
-                                text = root,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) OnAccent else TextOnGlassSecondary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // ── Scale Type Selector ───────────────────────────────
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(ScaleLibrary.scales) { scale ->
-                        val isSelected = selectedScale.name == scale.name
-                        Box(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) AccentTint else GlassSurfaceDim)
-                                .clickable { selectedScale = scale }
-                                .padding(horizontal = 24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = scale.name,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isSelected) OnAccent else TextOnGlassSecondary
+                            Icon(
+                                imageVector = Icons.Default.VolumeUp,
+                                contentDescription = "Escuchar Escala",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -157,136 +248,208 @@ fun ScalesScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // ── Scale Details Card ────────────────────────────────
-                GlassCardElevated(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    cornerRadius = 16.dp
+                // ── Fretboard Map Card ──────────────────────────────
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
-                    Column(modifier = Modifier.padding(4.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            text = selectedScale.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextOnGlassSecondary
+                            text = "Mapa del Diapasón (12 Trastes)",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        val notes = selectedScale.intervals.map { i -> ScaleLibrary.roots[(rootIndex + i) % 12] }
-                        Text(
-                            text = "Notas: ${notes.joinToString(", ")}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = AccentTint
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Tónica", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(greenColor)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Nota de la Escala", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        FretboardCanvas(
+                            rootNote = selectedRoot,
+                            intervals = currentScale.intervals,
+                            useSpanish = useSpanish,
+                            scaleNoteColor = greenColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // ── Fretboard Map ─────────────────────────────────────
-                Text(
-                    text = "Mapa del Diapasón",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextOnGlassPrimary,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                val scrollState = rememberScrollState()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .horizontalScroll(scrollState)
-                        .padding(horizontal = 16.dp)
-                ) {
-                    FretboardCanvas(
-                        targetNotesIndices = targetNotesIndices,
-                        rootIndex = rootIndex
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
+private val chromaticNotes = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+
+private fun getNoteAtFret(openNote: String, fret: Int): String {
+    val baseIndex = chromaticNotes.indexOf(openNote)
+    if (baseIndex == -1) return openNote
+    return chromaticNotes[(baseIndex + fret) % 12]
+}
+
+private fun isNoteInScale(note: String, root: String, intervals: List<Int>): Boolean {
+    val rootIndex = chromaticNotes.indexOf(root)
+    val noteIndex = chromaticNotes.indexOf(note)
+    if (rootIndex == -1 || noteIndex == -1) return false
+    val intervalFromRoot = (noteIndex - rootIndex + 12) % 12
+    return intervals.contains(intervalFromRoot)
+}
+
 @Composable
-fun FretboardCanvas(targetNotesIndices: List<Int>, rootIndex: Int) {
-    val primaryColor = AccentTint
-    val secondaryColor = AccentTint
-    val onSurfaceColor = TextOnGlassSecondary
-    val surfaceVariantColor = GlassSurface
+private fun FretboardCanvas(
+    rootNote: String,
+    intervals: List<Int>,
+    useSpanish: Boolean,
+    scaleNoteColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val nutColor = MaterialTheme.colorScheme.onSurface
+    val rootColor = MaterialTheme.colorScheme.primary
+    val inlayColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
 
-    Canvas(modifier = Modifier.size(width = 900.dp, height = 200.dp)) {
-        val numStrings = 6
-        val numFrets = 12
+    // Standard tuning open strings from high E (top line) to low E (bottom line)
+    val openStrings = listOf("E", "B", "G", "D", "A", "E")
+    val stringLabels = if (useSpanish) listOf("mi", "Si", "Sol", "Re", "La", "Mi") else openStrings
 
-        val stringSpacing = size.height / (numStrings + 1)
-        val fretSpacing = size.width / (numFrets + 1)
-        val tuningIndices = listOf(4, 11, 7, 2, 9, 4)
-
-        val markers = listOf(3, 5, 7, 9, 12)
-        markers.forEach { fret ->
-            val cx = (fret * fretSpacing) - (fretSpacing / 2) + fretSpacing
-            val cy = size.height / 2
-
-            if (fret == 12) {
-                drawCircle(color = surfaceVariantColor, radius = 12f, center = Offset(cx, cy - stringSpacing))
-                drawCircle(color = surfaceVariantColor, radius = 12f, center = Offset(cx, cy + stringSpacing))
-            } else {
-                drawCircle(color = surfaceVariantColor, radius = 16f, center = Offset(cx, cy))
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // String names column on the left
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            stringLabels.forEach { stringNote ->
+                Text(
+                    text = stringNote,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        // Draw strings
-        for (i in 0 until numStrings) {
-            val y = stringSpacing * (i + 1)
-            drawLine(
-                color = onSurfaceColor.copy(alpha = 0.5f),
-                start = Offset(fretSpacing, y),
-                end = Offset(size.width, y),
-                strokeWidth = 3f + (i * 0.8f)
-            )
-        }
+        Spacer(modifier = Modifier.width(6.dp))
 
-        // Draw frets
-        for (i in 1..numFrets + 1) {
-            val x = i * fretSpacing
-            val isNut = i == 1
-            drawLine(
-                color = onSurfaceColor,
-                start = Offset(x, stringSpacing),
-                end = Offset(x, stringSpacing * numStrings),
-                strokeWidth = if (isNut) 12f else 6f
-            )
-        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(vertical = 12.dp, horizontal = 8.dp)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val numStrings = 6
+                val numFrets = 12
+                val width = size.width
+                val height = size.height
+                val stringSpacing = height / (numStrings - 1)
+                val fretSpacing = width / numFrets
 
-        // Draw note positions
-        for (string in 0 until numStrings) {
-            for (fret in 0..numFrets) {
-                val noteIndex = (tuningIndices[string] + fret) % 12
+                // Nut
+                drawLine(
+                    color = nutColor,
+                    start = Offset(0f, 0f),
+                    end = Offset(0f, height),
+                    strokeWidth = 3.5.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
 
-                if (targetNotesIndices.contains(noteIndex)) {
-                    val isRoot = noteIndex == rootIndex
-
-                    val x = if (fret == 0) {
-                        fretSpacing - 40f
-                    } else {
-                        (fret * fretSpacing) + (fretSpacing / 2)
-                    }
-                    val y = stringSpacing * (string + 1)
-
-                    drawCircle(
-                        color = if (isRoot) secondaryColor else primaryColor,
-                        radius = 28f,
-                        center = Offset(x, y)
+                // Frets
+                for (fret in 1..numFrets) {
+                    val x = fret * fretSpacing
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, height),
+                        strokeWidth = 1.dp.toPx()
                     )
+
+                    if (fret in listOf(3, 5, 7, 9)) {
+                        drawCircle(
+                            color = inlayColor,
+                            radius = 6.dp.toPx(),
+                            center = Offset(x - fretSpacing / 2f, height / 2f)
+                        )
+                    } else if (fret == 12) {
+                        drawCircle(
+                            color = inlayColor,
+                            radius = 5.dp.toPx(),
+                            center = Offset(x - fretSpacing / 2f, height * 0.25f)
+                        )
+                        drawCircle(
+                            color = inlayColor,
+                            radius = 5.dp.toPx(),
+                            center = Offset(x - fretSpacing / 2f, height * 0.75f)
+                        )
+                    }
+                }
+
+                // Strings
+                for (stringIdx in 0 until numStrings) {
+                    val y = stringIdx * stringSpacing
+                    val strokeW = (0.9f + stringIdx * 0.22f).dp.toPx()
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
+                        strokeWidth = strokeW
+                    )
+                }
+
+                // Scale notes
+                openStrings.forEachIndexed { stringIdx, openNote ->
+                    val y = stringIdx * stringSpacing
+                    for (fret in 0..numFrets) {
+                        val noteAtFret = getNoteAtFret(openNote, fret)
+                        val inScale = isNoteInScale(noteAtFret, rootNote, intervals)
+
+                        if (inScale) {
+                            val isRoot = noteAtFret == rootNote
+                            val x = if (fret == 0) 0f else (fret - 0.5f) * fretSpacing
+                            val radius = if (isRoot) 7.dp.toPx() else 5.5.dp.toPx()
+
+                            drawCircle(
+                                color = if (isRoot) rootColor else scaleNoteColor,
+                                radius = radius,
+                                center = Offset(x, y)
+                            )
+                        }
+                    }
                 }
             }
         }

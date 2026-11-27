@@ -4,71 +4,78 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import com.riffforge.core.domain.util.AppSettings
 import com.riffforge.core.domain.util.ThemeMode
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryDark,
-    onPrimary = OnPrimaryDark,
-    primaryContainer = PrimaryContainerDark,
-    onPrimaryContainer = OnPrimaryContainerDark,
-    secondary = SecondaryDark,
-    onSecondary = OnSecondaryDark,
-    secondaryContainer = SecondaryContainerDark,
-    onSecondaryContainer = OnSecondaryContainerDark,
-    background = BackgroundDark,
-    onBackground = OnBackgroundDark,
-    surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SecondarySystemBackgroundDark,
-    onSurfaceVariant = Color(0x99EBEBF5),
-    outline = Color(0x2EFFFFFF),
-    error = SystemRedDark
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryLight,
-    onPrimary = OnPrimaryLight,
-    primaryContainer = PrimaryContainerLight,
-    onPrimaryContainer = OnPrimaryContainerLight,
-    secondary = SecondaryLight,
-    onSecondary = OnSecondaryLight,
-    secondaryContainer = SecondaryContainerLight,
-    onSecondaryContainer = OnSecondaryContainerLight,
-    background = BackgroundLight,
-    onBackground = OnBackgroundLight,
-    surface = SurfaceLight,
-    onSurface = OnSurfaceLight,
-    surfaceVariant = SecondarySystemGroupedBackgroundLight,
-    onSurfaceVariant = Color(0x993C3C43),
-    outline = Color(0x1F3C3C43),
-    error = SystemRedLight
-)
-
 /**
- * Resolves the effective appearance from [AppSettings.themeMode] (System / Light / Dark).
+ * Resolves the effective [ThemeMode] from [AppSettings.themeMode].
+ * For Sequoia themes the mode is explicit; for SYSTEM it follows the OS preference.
  */
 @Composable
-fun resolveDarkTheme(): Boolean {
-    val systemDark = isSystemInDarkTheme()
-    return when (AppSettings.themeMode) {
-        ThemeMode.SYSTEM -> systemDark
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
+fun resolveThemeMode(): ThemeMode {
+    return AppSettings.themeMode
 }
 
 @Composable
 fun RiffForgeTheme(
-    darkTheme: Boolean = resolveDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val themeMode = resolveThemeMode()
+    val sysDark = isSystemInDarkTheme()
+    val dark = isThemeDark(themeMode, sysDark)
 
-    CompositionLocalProvider(LocalRiffDarkTheme provides darkTheme) {
+    CompositionLocalProvider(LocalRiffTheme provides themeMode) {
+        val tc = resolveThemeColors(themeMode, sysDark)
+
+        val colorScheme = if (dark) {
+            darkColorScheme(
+                primary = tc.caret,
+                onPrimary = if (isColorLight(tc.caret)) Color.Black else Color.White,
+                primaryContainer = tc.caret.copy(alpha = 0.22f),
+                onPrimaryContainer = tc.textPrimary,
+                secondary = tc.keyword,
+                onSecondary = if (isColorLight(tc.keyword)) Color.Black else Color.White,
+                secondaryContainer = tc.keyword.copy(alpha = 0.22f),
+                onSecondaryContainer = tc.textPrimary,
+                tertiary = tc.function,
+                onTertiary = if (isColorLight(tc.function)) Color.Black else Color.White,
+                background = tc.bg,
+                onBackground = tc.textPrimary,
+                surface = tc.surface,
+                onSurface = tc.textPrimary,
+                surfaceVariant = tc.surfaceVariant,
+                onSurfaceVariant = tc.fg,
+                outline = tc.outline,
+                error = tc.systemRed,
+                onError = Color.White
+            )
+        } else {
+            lightColorScheme(
+                primary = tc.caret,
+                onPrimary = if (isColorLight(tc.caret)) Color.Black else Color.White,
+                primaryContainer = tc.caret.copy(alpha = 0.15f),
+                onPrimaryContainer = tc.textPrimary,
+                secondary = tc.keyword,
+                onSecondary = if (isColorLight(tc.keyword)) Color.Black else Color.White,
+                secondaryContainer = tc.keyword.copy(alpha = 0.15f),
+                onSecondaryContainer = tc.textPrimary,
+                tertiary = tc.function,
+                onTertiary = if (isColorLight(tc.function)) Color.Black else Color.White,
+                background = tc.bg,
+                onBackground = tc.textPrimary,
+                surface = tc.surface,
+                onSurface = tc.textPrimary,
+                surfaceVariant = tc.surfaceVariant,
+                onSurfaceVariant = tc.fg,
+                outline = tc.outline,
+                error = tc.systemRed,
+                onError = Color.White
+            )
+        }
+
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

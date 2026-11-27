@@ -13,68 +13,73 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.riffforge.core.presentation.navigation.RiffForgeTab
-import com.riffforge.core.presentation.theme.*
+import com.riffforge.core.presentation.navigation.TabNavigationTracker
 
-/**
- * Liquid Glass Tab Bar — floating capsule, following the iOS tab bar guidance.
- *
- * Visual effect:
- *   - Thin translucent glass capsule floating above content, inset from the screen edges
- *   - Specular rim highlight and a soft neutral shadow
- *   - Selected tab: tint-colored icon + label over a subtle glass "lens" pill
- *   - Unselected tabs use secondary label color; color is never used for decoration
- */
 @Composable
 fun BottomNavigationBar(
     tabNavigator: TabNavigator
 ) {
     val tabs = RiffForgeTab.List
     val currentTab = tabNavigator.current
-    val shape = RoundedCornerShape(32.dp)
+    val shape = RoundedCornerShape(28.dp)
 
+    val bg = MaterialTheme.colorScheme.background
+    // True floating Tab Bar matching Android 1:1 with soft bottom fade (zero hard black rectangle)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GlassBackgroundBase)
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.Transparent,
+                        0.38f to bg.copy(alpha = 0.75f),
+                        0.72f to bg
+                    )
+                )
+            )
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 12.dp,
-                    shape = shape,
-                    spotColor = GlassShadowElevated,
-                    ambientColor = GlassShadowElevated
-                ),
+            modifier = Modifier.fillMaxWidth(),
             shape = shape,
-            color = GlassSurfaceThin,
-            border = BorderStroke(width = 0.5.dp, brush = glassRimBrush())
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 tabs.forEach { tab ->
                     val isSelected = currentTab == tab
-                    val itemColor = if (isSelected) AccentTint else TextOnGlassSecondary
+                    val itemColor = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    val selectedFill = if (isSelected) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                    } else {
+                        Color.Transparent
+                    }
 
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(26.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(
-                                color = if (isSelected) GlassSurfaceDim else Color.Transparent,
-                                shape = RoundedCornerShape(26.dp)
+                                color = selectedFill,
+                                shape = RoundedCornerShape(20.dp)
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -82,6 +87,8 @@ fun BottomNavigationBar(
                                 onClick = {
                                     if (currentTab != tab) {
                                         tabNavigator.current = tab
+                                    } else {
+                                        TabNavigationTracker.popCurrentToRoot()
                                     }
                                 }
                             )
@@ -96,13 +103,12 @@ fun BottomNavigationBar(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = tab.options.title,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                            color = itemColor,
-                            modifier = Modifier.padding(top = 2.dp)
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = itemColor
                         )
                     }
                 }

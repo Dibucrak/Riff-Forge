@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.googleServices)
     kotlin("plugin.serialization") version libs.versions.kotlin
     kotlin("plugin.compose") version libs.versions.kotlin
 }
@@ -57,6 +58,10 @@ kotlin {
 
                 // Serialization
                 implementation(libs.kotlinx.serialization.json)
+
+                // Settings (Persistence)
+                implementation(libs.routines.settings)
+                implementation(libs.routines.settings.noarg)
             }
         }
         val commonTest by getting {
@@ -67,6 +72,10 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.androidx.activity.compose)
+                // Firebase for Android - Auth and Firestore (via BOM)
+                implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
+                implementation("com.google.firebase:firebase-auth")
+                implementation("com.google.firebase:firebase-firestore")
             }
         }
         val iosArm64Main by getting

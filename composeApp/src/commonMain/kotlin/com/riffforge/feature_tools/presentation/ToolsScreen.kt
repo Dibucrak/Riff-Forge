@@ -1,177 +1,259 @@
 package com.riffforge.feature_tools.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
-import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
-import com.riffforge.feature_daily_learning.presentation.DailyLearningScreen
-import com.riffforge.feature_metronome.presentation.MetronomeScreen
-import com.riffforge.feature_theory.presentation.circle_of_fifths.CircleOfFifthsScreen
-import com.riffforge.feature_theory.presentation.progressions.ProgressionScreen
-import com.riffforge.feature_theory.presentation.scales.ScalesScreen
+import cafe.adriel.voyager.navigator.Navigator
 
-enum class ToolDestination {
-    None, CircleOfFifths, Metronome, Scales, Progressions, ChordDictionary, DailyLearning
-}
-
-data class ToolItem(
-    val name: String,
+data class ToolEntry(
+    val title: String,
     val description: String,
     val icon: ImageVector,
-    val accentColor: Color,
-    val destination: ToolDestination
+    val onClick: () -> Unit
 )
 
 /**
- * Liquid Glass Tools Screen — the tools and theory hub with frosted glass aesthetic.
- *
- * Visual design:
- *   - Full-screen vibrant gradient background with ambient glow orbs
- *   - Header with title and subtitle
- *   - Each tool is displayed as a frosted glass card with an accent-colored icon
- *   - Cards have gradient edge highlights and soft colored shadows
- *   - Sub-screens (metronome, scales, etc.) are embedded via when block
+ * Tools Screen matching Android 1:1:
+ * Inset ElevatedCards (24dp), theme-matched primary icons, section titles inside card,
+ * and clean divided rows.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen() {
-    var selectedTool by remember { mutableStateOf(ToolDestination.None) }
+fun ToolsScreen(
+    navigator: Navigator? = null,
+    onNavigateToCircleOfFifths: () -> Unit = { navigator?.push(CircleOfFifthsToolScreen()) },
+    onNavigateToMetronome: () -> Unit = { navigator?.push(MetronomeToolScreen()) },
+    onNavigateToChordDictionary: () -> Unit = { navigator?.push(ChordDictionaryToolScreen()) },
+    onNavigateToCloudBackup: () -> Unit = { navigator?.push(CloudBackupToolScreen()) },
+    onNavigateToEarTraining: () -> Unit = { navigator?.push(EarTrainingToolScreen()) },
+    onNavigateToDailyLearning: () -> Unit = { navigator?.push(DailyLearningToolScreen()) },
+    onNavigateToProgressions: () -> Unit = { navigator?.push(ProgressionsToolScreen()) },
+    onNavigateToScales: () -> Unit = { navigator?.push(ScalesToolScreen()) },
+    onNavigateToCommunity: () -> Unit = { navigator?.push(CommunityToolScreen()) }
+) {
+    val scrollState = rememberScrollState()
 
-    val tools = listOf(
-        ToolItem("Diccionario de Acordes", "Encuentra diagramas interactivos en el diapasón", Icons.Default.Book, AccentTint, ToolDestination.ChordDictionary),
-        ToolItem("Aprendizaje Diario", "Descubre el acorde del día y retos teóricos", Icons.Default.Lightbulb, SystemYellow, ToolDestination.DailyLearning),
-        ToolItem("Constructor de Escalas", "Visualiza patrones y modos en el mástil", Icons.Default.MusicNote, SystemGreen, ToolDestination.Scales),
-        ToolItem("Metrónomo", "Mantén el tempo y ritmo con audio preciso", Icons.Default.Timer, SystemRed, ToolDestination.Metronome),
-        ToolItem("Generador de Progresiones", "Encuentra inspiración armónica y secuencias", Icons.Default.ArrowRight, AccentTint, ToolDestination.Progressions),
-        ToolItem("Círculo de Quintas", "Explora tonalidades relativas y armaduras", Icons.Default.School, AccentTint, ToolDestination.CircleOfFifths)
+    val practiceTools = listOf(
+        ToolEntry(
+            title = "Metrónomo",
+            description = "Compás, tempo y tap tempo en tiempo real.",
+            icon = Icons.Default.Timer,
+            onClick = onNavigateToMetronome
+        ),
+        ToolEntry(
+            title = "Diccionario de Acordes",
+            description = "Diagramas interactivos, cejillas y digitación.",
+            icon = Icons.Default.MenuBook,
+            onClick = onNavigateToChordDictionary
+        )
     )
 
-    when (selectedTool) {
-        ToolDestination.ChordDictionary -> {
-            ChordDictionaryScreen(onNavigateUp = { selectedTool = ToolDestination.None })
+    val theoryTools = listOf(
+        ToolEntry(
+            title = "Constructor de Escalas",
+            description = "Visualiza patrones y modos en el diapasón.",
+            icon = Icons.Default.MusicNote,
+            onClick = onNavigateToScales
+        ),
+        ToolEntry(
+            title = "Círculo de Quintas",
+            description = "Explora armaduras, tónicas y tonos relativos.",
+            icon = Icons.Default.School,
+            onClick = onNavigateToCircleOfFifths
+        ),
+        ToolEntry(
+            title = "Generador de Progresiones",
+            description = "Secuencias armónicas inspiradoras por género.",
+            icon = Icons.Default.AutoAwesome,
+            onClick = onNavigateToProgressions
+        )
+    )
+
+    val trainingTools = listOf(
+        ToolEntry(
+            title = "Aprendizaje Diario",
+            description = "Descubre el acorde del día y retos armónicos.",
+            icon = Icons.Default.Lightbulb,
+            onClick = onNavigateToDailyLearning
+        ),
+        ToolEntry(
+            title = "Entrenamiento de Oído",
+            description = "Reconocimiento auditivo de intervalos y notas.",
+            icon = Icons.Default.Headphones,
+            onClick = onNavigateToEarTraining
+        ),
+        ToolEntry(
+            title = "Comunidad Riff Forge",
+            description = "Explora y descarga canciones compartidas por otros músicos.",
+            icon = Icons.Default.Public,
+            onClick = onNavigateToCommunity
+        ),
+        ToolEntry(
+            title = "Sincronización en la Nube",
+            description = "Respalda y restaura tus canciones y setlists.",
+            icon = Icons.Default.CloudUpload,
+            onClick = onNavigateToCloudBackup
+        )
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Herramientas & Teoría", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ── Grupo 1: Práctica & Afinación ──────────────────────────
+            ToolsGroupCard(
+                groupTitle = "Práctica & Afinación",
+                entries = practiceTools
+            )
+
+            // ── Grupo 2: Teoría & Armonía ──────────────────────────────
+            ToolsGroupCard(
+                groupTitle = "Teoría & Composición",
+                entries = theoryTools
+            )
+
+            // ── Grupo 3: Entrenamiento & Rutinas ───────────────────────
+            ToolsGroupCard(
+                groupTitle = "Entrenamiento & Respaldo",
+                entries = trainingTools
+            )
+
+            Spacer(modifier = Modifier.navigationBarsPadding().height(110.dp))
         }
-        ToolDestination.DailyLearning -> {
-            DailyLearningScreen(onNavigateUp = { selectedTool = ToolDestination.None })
-        }
-        ToolDestination.CircleOfFifths -> {
-            CircleOfFifthsScreen(onNavigateUp = { selectedTool = ToolDestination.None })
-        }
-        ToolDestination.Metronome -> {
-            MetronomeScreen(onNavigateUp = { selectedTool = ToolDestination.None })
-        }
-        ToolDestination.Scales -> {
-            ScalesScreen(onNavigateUp = { selectedTool = ToolDestination.None })
-        }
-        ToolDestination.Progressions -> {
-            ProgressionScreen(onNavigateUp = { selectedTool = ToolDestination.None })
-        }
-        ToolDestination.None -> {
-            GlassBackground {
-                Column(
+    }
+}
+
+@Composable
+private fun ToolsGroupCard(
+    groupTitle: String,
+    entries: List<ToolEntry>
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Text(
+                text = groupTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            entries.forEachIndexed { index, entry ->
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 24.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { entry.onClick() }
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    // ── Header ────────────────────────────────────────
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Herramientas y Teoría",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextOnGlassPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Todo lo que necesitas para practicar",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextOnGlassSecondary
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // ── Tools List ────────────────────────────────────
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        items(tools) { tool ->
-                            GlassCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { selectedTool = tool.destination }
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Icon with accent background
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .background(
-                                                color = tool.accentColor.copy(alpha = 0.2f),
-                                                shape = MaterialTheme.shapes.medium
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = tool.icon,
-                                            contentDescription = null,
-                                            tint = tool.accentColor,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = entry.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
 
-                                    Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
 
-                                    // Text content
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = tool.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = TextOnGlassPrimary
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = tool.description,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = TextOnGlassSecondary
-                                        )
-                                    }
-
-                                    // Chevron indicator
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = "Abrir",
-                                        tint = TextOnGlassDim,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
+                        Column {
+                            Text(
+                                text = entry.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = entry.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // ── Info text ─────────────────────────────────────
-                    Text(
-                        text = "Las herramientas de teoría musical te ayudarán a mejorar.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextOnGlassDim
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(14.dp)
                     )
+                }
+
+                if (index < entries.lastIndex) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(start = 56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
         }

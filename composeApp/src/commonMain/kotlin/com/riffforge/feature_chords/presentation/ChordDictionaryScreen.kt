@@ -1,267 +1,382 @@
 package com.riffforge.feature_chords.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riffforge.core.audio.AudioSynth
 import com.riffforge.core.domain.util.AppSettings
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
+import com.riffforge.core.domain.util.NotationConverter
+import com.riffforge.core.presentation.theme.SystemGreen
 import com.riffforge.shared.domain.model.Chord
 import com.riffforge.shared.domain.util.ChordLibrary
-import com.riffforge.shared.domain.util.ChordTransposer
 
-/**
- * Unified Compose Multiplatform Chord Dictionary Screen.
- * Runs on Android, iOS, and macOS with 100% native Compose Canvas drawing.
- */
+private data class ChordVoicingOption(
+    val label: String,
+    val chord: Chord
+)
+
+private val CHROMATIC_NOTES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+
+private fun computeChordNotes(root: String, type: String, useSpanish: Boolean): String {
+    val rootIdx = CHROMATIC_NOTES.indexOf(root).coerceAtLeast(0)
+    val intervals = when (type) {
+        "Mayor", "Mayor (Cejilla)" -> listOf(0, 4, 7)
+        "Menor" -> listOf(0, 3, 7)
+        "7" -> listOf(0, 4, 7, 10)
+        "Maj7" -> listOf(0, 4, 7, 11)
+        "Min7" -> listOf(0, 3, 7, 10)
+        "Sus4" -> listOf(0, 5, 7)
+        "Sus2" -> listOf(0, 2, 7)
+        "Dim" -> listOf(0, 3, 6)
+        "Aug" -> listOf(0, 4, 8)
+        else -> listOf(0, 4, 7)
+    }
+    return intervals.joinToString(" · ") { step ->
+        val note = CHROMATIC_NOTES[(rootIdx + step) % 12]
+        NotationConverter.formatChord(note, useSpanish)
+    }
+}
+
+private fun buildVoicingOptions(root: String, type: String, baseChord: Chord?): List<ChordVoicingOption> {
+    val list = mutableListOf<ChordVoicingOption>()
+    val rootIdx = CHROMATIC_NOTES.indexOf(root).coerceAtLeast(0)
+
+    if (baseChord != null) {
+        val baseLabel = if (!baseChord.isBarre && baseChord.startingFret == 1) {
+            "Abierto"
+        } else {
+            "Cejilla ${baseChord.startingFret}"
+        }
+        list.add(ChordVoicingOption(baseLabel, baseChord))
+    }
+
+    val fretA = ((rootIdx - 9 + 12) % 12).let { if (it == 0) 12 else it }
+    val aShape = when (type) {
+        "Mayor" -> Chord("${root}_a_maj", root, type, listOf(-1, fretA, fretA + 2, fretA + 2, fretA + 2, fretA), listOf(0, 1, 2, 3, 4, 1), "Media", true, fretA, fretA)
+        "Menor" -> Chord("${root}_a_min", root, type, listOf(-1, fretA, fretA + 2, fretA + 2, fretA + 1, fretA), listOf(0, 1, 3, 4, 2, 1), "Media", true, fretA, fretA)
+        "7" -> Chord("${root}_a_7", root, type, listOf(-1, fretA, fretA + 2, fretA, fretA + 2, fretA), listOf(0, 1, 3, 1, 4, 1), "Media", true, fretA, fretA)
+        "Maj7" -> Chord("${root}_a_maj7", root, type, listOf(-1, fretA, fretA + 2, fretA + 1, fretA + 2, fretA), listOf(0, 1, 3, 2, 4, 1), "Media", true, fretA, fretA)
+        "Min7" -> Chord("${root}_a_min7", root, type, listOf(-1, fretA, fretA + 2, fretA, fretA + 1, fretA), listOf(0, 1, 3, 1, 2, 1), "Media", true, fretA, fretA)
+        "Sus4" -> Chord("${root}_a_sus4", root, type, listOf(-1, fretA, fretA + 2, fretA + 2, fretA + 3, fretA), listOf(0, 1, 2, 3, 4, 1), "Media", true, fretA, fretA)
+        else -> null
+    }
+    if (aShape != null && list.none { it.chord.stringFrets == aShape.stringFrets }) {
+        list.add(ChordVoicingOption("Cejilla $fretA", aShape))
+    }
+
+    val fretE = ((rootIdx - 4 + 12) % 12).let { if (it == 0) 12 else it }
+    val eShape = when (type) {
+        "Mayor" -> Chord("${root}_e_maj", root, type, listOf(fretE, fretE + 2, fretE + 2, fretE + 1, fretE, fretE), listOf(1, 3, 4, 2, 1, 1), "Media", true, fretE, fretE)
+        "Menor" -> Chord("${root}_e_min", root, type, listOf(fretE, fretE + 2, fretE + 2, fretE, fretE, fretE), listOf(1, 3, 4, 1, 1, 1), "Media", true, fretE, fretE)
+        "7" -> Chord("${root}_e_7", root, type, listOf(fretE, fretE + 2, fretE, fretE + 1, fretE, fretE), listOf(1, 3, 1, 2, 1, 1), "Media", true, fretE, fretE)
+        "Maj7" -> Chord("${root}_e_maj7", root, type, listOf(fretE, -1, fretE + 1, fretE + 1, fretE, -1), listOf(1, 0, 3, 4, 2, 0), "Media", false, 0, fretE)
+        "Min7" -> Chord("${root}_e_min7", root, type, listOf(fretE, fretE + 2, fretE, fretE, fretE, fretE), listOf(1, 3, 1, 1, 1, 1), "Media", true, fretE, fretE)
+        "Sus4" -> Chord("${root}_e_sus4", root, type, listOf(fretE, fretE + 2, fretE + 2, fretE + 2, fretE, fretE), listOf(1, 2, 3, 4, 1, 1), "Media", true, fretE, fretE)
+        else -> null
+    }
+    if (eShape != null && list.none { it.chord.stringFrets == eShape.stringFrets }) {
+        list.add(ChordVoicingOption("Cejilla $fretE", eShape))
+    }
+
+    return list.sortedBy { if (it.label == "Abierto") 0 else it.chord.startingFret }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChordDictionaryScreen(
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit = {}
 ) {
-    var selectedRoot by remember { mutableStateOf("C") }
-    var selectedType by remember { mutableStateOf("Mayor") }
     val useSpanish = AppSettings.useSpanishNotation
+    var selectedRoot by rememberSaveable { mutableStateOf("C") }
+    var selectedType by rememberSaveable { mutableStateOf("Mayor") }
 
-    val currentChord = remember(selectedRoot, selectedType) {
-        ChordLibrary.chords.find { it.root == selectedRoot && it.type == selectedType }
+    val displayTypes = remember {
+        ChordLibrary.types.filter { it != "Mayor (Cejilla)" }
     }
+
+    val baseChord = remember(selectedRoot, selectedType) {
+        ChordLibrary.getChord(selectedRoot, selectedType)
+    }
+    val voicingOptions = remember(selectedRoot, selectedType, baseChord) {
+        buildVoicingOptions(selectedRoot, selectedType, baseChord)
+    }
+    var selectedVoicingIndex by remember(selectedRoot, selectedType) { mutableStateOf(0) }
+    val activeChord = voicingOptions.getOrNull(selectedVoicingIndex)?.chord ?: baseChord
 
     val scrollState = rememberScrollState()
 
-    GlassBackground {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Diccionario de Acordes", fontWeight = FontWeight.ExtraBold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-                .verticalScroll(scrollState)
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ── Top Bar ───────────────────────────────────────────────
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // ── 7 Root Notes Row ─────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GlassButton(
-                        onClick = onNavigateUp,
-                        cornerRadius = 14.dp
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = TextOnGlassPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Diccionario de Acordes",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextOnGlassPrimary
-                    )
-                }
-
-                // Spanish/American notation toggle
-                GlassButton(
-                    onClick = { AppSettings.toggleSpanishNotation() },
-                    cornerRadius = 14.dp
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = "Idioma de notas",
-                            tint = AccentTint,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (useSpanish) "Do-Re" else "C-D",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = AccentTint
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Root Note Selector ────────────────────────────────────
-            Text(
-                text = "Tónica",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = TextOnGlassSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(ChordLibrary.roots) { root ->
-                    val isSelected = root == selectedRoot
-                    val displayRoot = ChordTransposer.getNoteDisplayName(root, useSpanish)
-
-                    Box(
+                ChordLibrary.roots.forEach { root ->
+                    val displayRoot = NotationConverter.formatChord(root, useSpanish)
+                    val isSelected = selectedRoot == root
+                    Surface(
                         modifier = Modifier
-                            .size(46.dp)
+                            .weight(1f)
+                            .height(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) AccentTint
-                                else GlassSurfaceDim
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                selectedRoot = root
-                            },
-                        contentAlignment = Alignment.Center
+                            .clickable { selectedRoot = root },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                     ) {
-                        Text(
-                            text = displayRoot,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) OnAccent else TextOnGlassPrimary
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Chord Type Selector ───────────────────────────────────
-            Text(
-                text = "Tipo de Acorde",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = TextOnGlassSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(ChordLibrary.types) { type ->
-                    val isSelected = type == selectedType
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) AccentTint
-                                else GlassSurfaceDim
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                selectedType = type
-                            }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = type,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) OnAccent else TextOnGlassPrimary
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Chord Display Card ────────────────────────────────────
-            GlassCardElevated(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 24.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val displayRoot = ChordTransposer.getNoteDisplayName(selectedRoot, useSpanish)
-                    Text(
-                        text = "$displayRoot $selectedType",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = AccentTint
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (currentChord != null) {
-                        ChordDiagramCanvas(chord = currentChord)
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Chord metadata chips
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            GlassStatChip(
-                                modifier = Modifier.weight(1f),
-                                label = "Dificultad",
-                                value = currentChord.difficulty,
-                                accentColor = SystemYellow
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            GlassStatChip(
-                                modifier = Modifier.weight(1f),
-                                label = "Cejilla",
-                                value = if (currentChord.isBarre) "Traste ${currentChord.barreFret}" else "No",
-                                accentColor = SystemGreen
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            GlassStatChip(
-                                modifier = Modifier.weight(1f),
-                                label = "Posición",
-                                value = "T ${currentChord.startingFret}",
-                                accentColor = AccentTint
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = displayRoot,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    } else {
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Segmented Quality Bar ────────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    displayTypes.forEach { type ->
+                        val isSelected = selectedType == type
                         Box(
-                            modifier = Modifier.height(240.dp),
+                            modifier = Modifier
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.surface
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .clickable { selectedType = type }
+                                .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Diagrama en construcción",
-                                color = TextOnGlassSecondary,
-                                style = MaterialTheme.typography.bodyLarge
+                                text = type,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Main Chord Card ──────────────────────────────────────────
+            val spanishRoot = NotationConverter.formatChord(selectedRoot, true)
+            val titleText = if (useSpanish) {
+                "$spanishRoot $selectedType ($selectedRoot)"
+            } else {
+                "$selectedRoot $selectedType ($spanishRoot)"
+            }
+            val notesText = remember(selectedRoot, selectedType, useSpanish) {
+                computeChordNotes(selectedRoot, selectedType, useSpanish)
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = titleText,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Notas: $notesText",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (activeChord != null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        AudioSynth.playChord(
+                                            frets = activeChord.stringFrets,
+                                            baseFret = activeChord.startingFret.coerceAtLeast(1)
+                                        )
+                                    },
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                        contentDescription = "Escuchar acorde",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "Traste ${activeChord.startingFret}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    ) {
+                        if (activeChord != null) {
+                            ChordFretboardDiagram(chord = activeChord)
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(260.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Diagrama no disponible",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (voicingOptions.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            voicingOptions.forEachIndexed { idx, option ->
+                                val isCurrentPos = idx == selectedVoicingIndex
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(38.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { selectedVoicingIndex = idx },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isCurrentPos) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surface,
+                                    border = if (isCurrentPos) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = option.label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCurrentPos) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -272,161 +387,131 @@ fun ChordDictionaryScreen(
     }
 }
 
-/**
- * Pure Compose Multiplatform Canvas drawing for guitar chords.
- * Uses Compose TextMeasurer for drawing labels without platform-specific dependencies.
- */
 @Composable
-fun ChordDiagramCanvas(chord: Chord) {
-    val textMeasurer = rememberTextMeasurer()
-    val primaryColor = AccentTint
-    val onSurfaceColor = TextOnGlassPrimary
-    val onPrimaryColor = OnAccent
-    val errorColor = SystemRed
-    val openStringColor = SystemGreen
-    val fretLabelColor = SystemYellow
+fun ChordDiagramCanvas(chord: Chord) = ChordFretboardDiagram(chord)
 
-    Box(
+@Composable
+fun ChordFretboardDiagram(chord: Chord) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp),
-        contentAlignment = Alignment.Center
+            .padding(vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Canvas(modifier = Modifier.size(width = 200.dp, height = 250.dp)) {
-            val numStrings = 6
-            val numFretsToShow = 5
-
-            val stringSpacing = size.width / (numStrings - 1)
-            val startY = 36.dp.toPx()
-            val fretSpacing = (size.height - startY - 16.dp.toPx()) / numFretsToShow
-
-            // Draw horizontal frets
-            for (i in 0..numFretsToShow) {
-                val y = startY + (i * fretSpacing)
-                val isNut = i == 0 && chord.startingFret == 1
-                drawLine(
-                    color = if (isNut) onSurfaceColor else onSurfaceColor.copy(alpha = 0.35f),
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = if (isNut) 8f else 3f
+        // Open / Muted string markers row
+        Row(
+            modifier = Modifier.width(200.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            chord.stringFrets.forEach { fret ->
+                Text(
+                    text = when (fret) {
+                        -1 -> "✕"
+                        0 -> "○"
+                        else -> " "
+                    },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = when (fret) {
+                        0 -> SystemGreen
+                        else -> mutedColor
+                    }
                 )
             }
+        }
 
-            // Draw vertical guitar strings (6th to 1st)
-            for (i in 0 until numStrings) {
-                val x = i * stringSpacing
-                // String thickness decreases from low E (thick) to high E (thin)
-                val stringWidth = 5f - (i * 0.6f)
-                drawLine(
-                    color = onSurfaceColor.copy(alpha = 0.85f),
-                    start = Offset(x, startY),
-                    end = Offset(x, startY + (numFretsToShow * fretSpacing)),
-                    strokeWidth = stringWidth.coerceAtLeast(1.5f)
-                )
-            }
+        Spacer(modifier = Modifier.height(4.dp))
 
-            // Draw starting fret label if beyond fret 1
-            if (chord.startingFret > 1) {
-                val fretLabel = "${chord.startingFret}fr"
-                val textLayout = textMeasurer.measure(
-                    text = fretLabel,
-                    style = TextStyle(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = fretLabelColor
-                    )
-                )
-                drawText(
-                    textLayoutResult = textLayout,
-                    topLeft = Offset(-textLayout.size.width.toFloat() - 8f, startY + (fretSpacing / 2f) - (textLayout.size.height / 2f))
-                )
-            }
+        Box(
+            modifier = Modifier.size(width = 200.dp, height = 210.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val numStrings = 6
+                val numFrets = 5
+                val stringSpacing = size.width / (numStrings - 1)
+                val fretSpacing = size.height / numFrets
 
-            // Draw Open (O) and Muted (X) string markers
-            chord.frets.forEachIndexed { index, fretVal ->
-                val x = index * stringSpacing
-                if (fretVal == -1) {
-                    val textLayout = textMeasurer.measure(
-                        text = "✕",
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = errorColor
-                        )
-                    )
-                    drawText(
-                        textLayoutResult = textLayout,
-                        topLeft = Offset(x - (textLayout.size.width / 2f), startY - 26.dp.toPx())
-                    )
-                } else if (fretVal == 0) {
-                    val textLayout = textMeasurer.measure(
-                        text = "○",
-                        style = TextStyle(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = openStringColor
-                        )
-                    )
-                    drawText(
-                        textLayoutResult = textLayout,
-                        topLeft = Offset(x - (textLayout.size.width / 2f), startY - 26.dp.toPx())
+                for (i in 0..numFrets) {
+                    val y = i * fretSpacing
+                    val isNut = i == 0 && chord.startingFret == 1
+                    drawLine(
+                        color = if (isNut) onSurfaceColor else onSurfaceColor.copy(alpha = 0.3f),
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = if (isNut) 3.5.dp.toPx() else 1.2.dp.toPx()
                     )
                 }
-            }
 
-            // Draw Barre chord if present
-            if (chord.isBarre && chord.barreFret > 0) {
-                val visualFret = chord.barreFret - chord.startingFret + 1
-                if (visualFret in 1..numFretsToShow) {
-                    val y = startY + ((visualFret - 1) * fretSpacing) + (fretSpacing / 2f)
+                for (i in 0 until numStrings) {
+                    val x = i * stringSpacing
+                    drawLine(
+                        color = onSurfaceColor.copy(alpha = 0.35f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = 1.2.dp.toPx()
+                    )
+                }
 
-                    // Find range of strings covered by the barre
-                    val barreStrings = chord.frets.mapIndexedNotNull { i, f -> if (f >= chord.barreFret) i else null }
-                    if (barreStrings.isNotEmpty()) {
-                        val minString = barreStrings.minOrNull() ?: 0
-                        val maxString = barreStrings.maxOrNull() ?: (numStrings - 1)
-                        val startX = minString * stringSpacing
-                        val endX = maxString * stringSpacing
+                val barreGroup = chord.fingers.zip(chord.stringFrets)
+                    .mapIndexed { idx, p -> Triple(idx, p.first, p.second) }
+                    .filter { it.second == 1 && it.third == chord.startingFret && chord.isBarre }
 
-                        drawLine(
-                            color = primaryColor.copy(alpha = 0.85f),
-                            start = Offset(startX, y),
-                            end = Offset(endX, y),
-                            strokeWidth = 36f,
-                            cap = StrokeCap.Round
-                        )
+                if (barreGroup.size > 1) {
+                    val startX = barreGroup.minOf { it.first } * stringSpacing
+                    val endX = barreGroup.maxOf { it.first } * stringSpacing
+                    val y = fretSpacing / 2f
+                    drawLine(
+                        color = primaryColor,
+                        start = Offset(startX, y),
+                        end = Offset(endX, y),
+                        strokeWidth = 17.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                chord.stringFrets.forEachIndexed { idx, fretVal ->
+                    if (fretVal > 0) {
+                        val visualFret = fretVal - chord.startingFret + 1
+                        if (visualFret in 1..numFrets) {
+                            val cx = idx * stringSpacing
+                            val cy = ((visualFret - 1) * fretSpacing) + (fretSpacing / 2f)
+                            drawCircle(
+                                color = primaryColor,
+                                radius = 9.5.dp.toPx(),
+                                center = Offset(cx, cy)
+                            )
+                        }
                     }
                 }
             }
 
-            // Draw Fingered frets (dots with finger numbers)
-            chord.frets.forEachIndexed { index, fretVal ->
-                if (fretVal > 0) {
+            // Finger number overlays in Compose (100% multiplatform without nativeCanvas)
+            val numStrings = 6
+            val numFrets = 5
+            chord.stringFrets.forEachIndexed { idx, fretVal ->
+                val finger = chord.fingers.getOrNull(idx) ?: 0
+                if (fretVal > 0 && finger > 0) {
                     val visualFret = fretVal - chord.startingFret + 1
-                    if (visualFret in 1..numFretsToShow) {
-                        val cx = index * stringSpacing
-                        val cy = startY + ((visualFret - 1) * fretSpacing) + (fretSpacing / 2f)
-
-                        drawCircle(
-                            color = primaryColor,
-                            radius = 18f,
-                            center = Offset(cx, cy)
-                        )
-
-                        // Draw finger index inside the dot if available
-                        val fingerNum = chord.fingers.getOrNull(index) ?: 0
-                        if (fingerNum > 0) {
-                            val textLayout = textMeasurer.measure(
-                                text = fingerNum.toString(),
-                                style = TextStyle(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = onPrimaryColor
-                                )
-                            )
-                            drawText(
-                                textLayoutResult = textLayout,
-                                topLeft = Offset(cx - (textLayout.size.width / 2f), cy - (textLayout.size.height / 2f))
+                    if (visualFret in 1..numFrets) {
+                        val xDp = (idx * (200f / (numStrings - 1))).dp - 9.dp
+                        val yDp = (((visualFret - 1) * (210f / numFrets)) + (210f / numFrets / 2f)).dp - 9.dp
+                        Box(
+                            modifier = Modifier
+                                .offset(x = xDp, y = yDp)
+                                .size(18.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = finger.toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = onPrimaryColor
                             )
                         }
                     }

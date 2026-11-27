@@ -12,7 +12,7 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
-            android:name=".ComposeActivity"
+            android:name="com.riffforge.ComposeActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mcc|mnc|locale|fontScale|uiMode"
             android:theme="@android:style/Theme.Material.Light.NoActionBar">

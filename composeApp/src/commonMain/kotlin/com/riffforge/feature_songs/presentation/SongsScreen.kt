@@ -1,183 +1,748 @@
 package com.riffforge.feature_songs.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
+import cafe.adriel.voyager.navigator.Navigator
+import com.riffforge.LocalAuthManager
+import com.riffforge.core.domain.store.RepertoireStore
+import com.riffforge.core.domain.store.SetlistItemModel
+import com.riffforge.core.domain.store.SongItemModel
+import com.riffforge.core.domain.util.AppSettings
+import com.riffforge.core.domain.util.NotationConverter
+import com.riffforge.core.presentation.components.ProfileAvatar
 
-data class SongItem(
-    val id: Int,
-    val title: String,
-    val artist: String
-)
-
-/**
- * Liquid Glass Songs Screen — the song library with frosted glass aesthetic.
- *
- * Visual design:
- *   - Full-screen vibrant gradient background with ambient glow orbs
- *   - Header with title and floating glass add button
- *   - Each song is displayed as a frosted glass card with gradient edge highlights
- *   - Empty state uses a centered glass panel with inviting copy
- *   - Soft colored shadows for depth instead of harsh Material elevation
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SongsScreen() {
-    var songs by remember { mutableStateOf(
-        listOf(
-            SongItem(1, "Stairway to Heaven", "Led Zeppelin"),
-            SongItem(2, "Hotel California", "Eagles"),
-            SongItem(3, "Sweet Child O' Mine", "Guns N' Roses"),
-            SongItem(4, "Back in Black", "AC/DC"),
-            SongItem(5, "Bohemian Rhapsody", "Queen")
-        )
-    )}
+fun SongsScreen(
+    navigator: Navigator? = null
+) {
+    val authManager = LocalAuthManager.current
+    val currentUser by authManager.currentUser.collectAsState(initial = null)
+    val useSpanish = AppSettings.useSpanishNotation
+    var selectedTab by remember { mutableStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showCreateSetlistDialog by remember { mutableStateOf(false) }
+    var songPendingDelete by remember { mutableStateOf<SongItemModel?>(null) }
+    var setlistPendingDelete by remember { mutableStateOf<SetlistItemModel?>(null) }
 
-    GlassBackground {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-        ) {
+    val allSongs = RepertoireStore.songs
+    val allSetlists = RepertoireStore.setlists
 
-            // ── Header ───────────────────────────────────────────────
-            Spacer(modifier = Modifier.height(16.dp))
+    val filteredSongs = remember(allSongs.toList(), searchQuery) {
+        if (searchQuery.isBlank()) {
+            allSongs.toList()
+        } else {
+            allSongs.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true) ||
+                    it.key.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Mis Canciones",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextOnGlassPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${songs.size} canciones en tu colección",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextOnGlassSecondary
-                    )
-                }
+    val filteredSetlists = remember(allSetlists.toList(), searchQuery) {
+        if (searchQuery.isBlank()) {
+            allSetlists.toList()
+        } else {
+            allSetlists.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                    it.description.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
-                // Floating glass add button
-                GlassButtonAccent(
-                    onClick = { /* Add song */ },
-                    cornerRadius = 16.dp
+    songPendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { songPendingDelete = null },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("¿Eliminar canción local?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Se eliminará \"${target.title}\" de tu dispositivo y de cualquier setlist donde esté incluida.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        RepertoireStore.deleteSong(target.id)
+                        songPendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Agregar canción",
-                        tint = OnAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Text("Eliminar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { songPendingDelete = null }) {
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        )
+    }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Song List ────────────────────────────────────────────
-            if (songs.isEmpty()) {
-                // ── Empty State ──────────────────────────────────────
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+    setlistPendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { setlistPendingDelete = null },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("¿Eliminar setlist?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Se eliminará el setlist \"${target.name}\". Tus canciones locales se conservarán.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        RepertoireStore.deleteSetlist(target.id)
+                        setlistPendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    GlassCard(
+                    Text("Eliminar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { setlistPendingDelete = null }) {
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    if (showCreateSetlistDialog) {
+        var newSetlistName by remember { mutableStateOf("") }
+        var newSetlistDesc by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showCreateSetlistDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Nuevo Setlist", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = newSetlistName,
+                        onValueChange = { newSetlistName = it },
+                        label = { Text("Nombre del Setlist") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newSetlistDesc,
+                        onValueChange = { newSetlistDesc = it },
+                        label = { Text("Descripción (Opcional)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newSetlistName.isNotBlank()) {
+                            RepertoireStore.addSetlist(newSetlistName.trim(), newSetlistDesc.trim())
+                            showCreateSetlistDialog = false
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Crear", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateSetlistDialog = false }) {
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Mi Repertorio",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(onClick = { navigator?.push(ProfileToolScreen()) }) {
+                        ProfileAvatar(
+                            photoData = currentUser?.photoData.orEmpty(),
+                            photoUrl = currentUser?.photoUrl.orEmpty(),
+                            size = 38.dp
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    if (selectedTab == 0) {
+                        navigator?.push(AddEditSongToolScreen(songId = null))
+                    } else {
+                        showCreateSetlistDialog = true
+                    }
+                },
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = 86.dp),
+                shape = RoundedCornerShape(16.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = if (selectedTab == 0) "Añadir Canción" else "Crear Setlist",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+            ) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Segmented Category Tabs ──────────────────────────────
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight()
+                            .padding(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = AccentTint,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No hay canciones aún",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextOnGlassPrimary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Agrega tu primera canción para comenzar",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextOnGlassSecondary
-                            )
-                        }
-                    }
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(songs) { song ->
-                        GlassCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { /* Navigate to song detail */ }
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        val tabs = listOf("Canciones", "Setlists")
+                        tabs.forEachIndexed { index, title ->
+                            val isSelected = selectedTab == index
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                                    )
+                                    .clickable { selectedTab = index },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = song.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextOnGlassPrimary
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = song.artist,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextOnGlassSecondary
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Reproducir",
-                                    tint = AccentTint,
-                                    modifier = Modifier.size(22.dp)
+                                Text(
+                                    text = title,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Search Bar ──────────────────────────────────────────
+                if (allSongs.isNotEmpty() || allSetlists.isNotEmpty()) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = {
+                            Text(
+                                if (selectedTab == 0) "Buscar canción, artista o tono..."
+                                else "Buscar setlist..."
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Buscar",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Limpiar búsqueda",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                when (selectedTab) {
+                    0 -> {
+                        if (filteredSongs.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = 80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ElevatedCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.MusicNote,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = if (searchQuery.isNotBlank()) "Sin resultados para \"$searchQuery\"" else "Tu repertorio está vacío",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = if (searchQuery.isNotBlank()) "Prueba con otro título, artista o tono" else "Agrega tu primera canción o importa una desde Comunidad",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(20.dp))
+                                        Button(
+                                            onClick = {
+                                                if (searchQuery.isNotBlank()) searchQuery = ""
+                                                else navigator?.push(AddEditSongToolScreen(songId = null))
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            modifier = Modifier.height(50.dp)
+                                        ) {
+                                            Icon(if (searchQuery.isNotBlank()) Icons.Default.Clear else Icons.Default.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(if (searchQuery.isNotBlank()) "Limpiar búsqueda" else "Agregar Canción", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 148.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(filteredSongs, key = { it.id }) { song ->
+                                    SongItemCard(
+                                        song = song,
+                                        useSpanishNotation = useSpanish,
+                                        onClick = {
+                                            navigator?.push(
+                                                SongViewerToolScreen(
+                                                    songId = song.id,
+                                                    setlistId = null
+                                                )
+                                            )
+                                        },
+                                        onDeleteClick = {
+                                            songPendingDelete = song
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    1 -> {
+                        if (filteredSetlists.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = 80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ElevatedCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.MusicNote,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = if (searchQuery.isNotBlank()) "Sin setlists para \"$searchQuery\"" else "No tienes Setlists creados",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = if (searchQuery.isNotBlank()) "Intenta con otro término" else "Agrupa canciones para tus presentaciones en vivo",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(20.dp))
+                                        Button(
+                                            onClick = {
+                                                if (searchQuery.isNotBlank()) searchQuery = ""
+                                                else showCreateSetlistDialog = true
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            modifier = Modifier.height(50.dp)
+                                        ) {
+                                            Icon(if (searchQuery.isNotBlank()) Icons.Default.Clear else Icons.Default.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(if (searchQuery.isNotBlank()) "Limpiar búsqueda" else "Crear Setlist", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 148.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(filteredSetlists, key = { it.id }) { setlist ->
+                                    SetlistItemCard(
+                                        setlist = setlist,
+                                        onClick = {
+                                            navigator?.push(
+                                                SetlistDetailToolScreen(setlistId = setlist.id)
+                                            )
+                                        },
+                                        onDeleteClick = {
+                                            setlistPendingDelete = setlist
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SongItemCard(
+    song: SongItemModel,
+    useSpanishNotation: Boolean,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val displayKey = remember(song.key, useSpanishNotation) {
+        NotationConverter.formatChord(song.key, useSpanishNotation)
+    }
+
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "Tono: $displayKey",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Afinación",
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = song.tuning,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(start = 6.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Speed,
+                        contentDescription = "Tempo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${song.bpm}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "BPM",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-            // ── Info text ────────────────────────────────────────────
-            Text(
-                text = "Las canciones se sincronizarán desde la base de datos.",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextOnGlassDim
-            )
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Eliminar canción",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetlistItemCard(
+    setlist: SetlistItemModel,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LibraryMusic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = setlist.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (setlist.description.isNotBlank()) {
+                        Text(
+                            text = setlist.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${setlist.songIds.size} canciones",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Eliminar setlist",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
         }
     }
 }

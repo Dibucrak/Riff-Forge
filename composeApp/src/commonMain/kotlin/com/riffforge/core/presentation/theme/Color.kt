@@ -1,155 +1,420 @@
 package com.riffforge.core.presentation.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.riffforge.core.domain.util.ThemeMode
 
 /**
- * RiffForge palette — based on Apple Human Interface Guidelines.
+ * RiffForge palette — Authentic Sequoia themes + System (ForgeOrange).
  *
- * - Neutral backgrounds (true black in dark mode, grouped gray #F2F2F7 in light mode).
- * - A single tint color ("forge orange", systemOrange) drives interactive elements.
- * - Semantic system colors (green / red / yellow) only carry meaning: success, error, warning.
- * - Liquid Glass surfaces are translucent neutral materials with a specular rim, never colored.
- *
- * Every token is adaptive: it resolves from [LocalRiffDarkTheme], provided by [RiffForgeTheme].
+ * Sequoia Themes:
+ * - Moonlight (Dark & Light): Vibrant violet accent, sky blue keywords, pink function, warm peach variable.
+ * - Monochrome (Dark & Light): Refined slate accents, cool grays, elegant minimalist feel.
+ * - Retro (Dark & Light): Vintage steel/petrol blue accents, terracotta strings, sage green keywords, warm amber.
+ * - System: Forge Orange accent with Apple HIG system surfaces and high contrast.
  */
-val LocalRiffDarkTheme = staticCompositionLocalOf { true }
+val LocalRiffTheme = staticCompositionLocalOf { ThemeMode.SYSTEM }
 
-private inline val isDark: Boolean
-    @Composable @ReadOnlyComposable get() = LocalRiffDarkTheme.current
+// Helper to determine if a color has high luminance
+internal fun isColorLight(c: Color): Boolean {
+    val luminance = 0.299 * c.red + 0.587 * c.green + 0.114 * c.blue
+    return luminance > 0.5f
+}
 
-// ── Raw system values (light / dark) ──────────────────────────────────────
+// ── ThemeColors Definition ──────────────────────────────────────────────────
 
-// Tint — systemOrange. Light uses Apple's increased-contrast variant so text passes 4.5:1 on white.
-internal val ForgeOrangeLight = Color(0xFFC93400)
-internal val ForgeOrangeDark = Color(0xFFFF9F0A)
+data class ThemeColors(
+    val bg: Color,
+    val surface: Color,
+    val surfaceElevated: Color,
+    val surfaceVariant: Color,
+    val fg: Color,
+    val textPrimary: Color,
+    val caret: Color,
+    val keyword: Color,
+    val string: Color,
+    val function: Color,
+    val variable: Color,
+    val comment: Color,
+    val outline: Color,
+    val systemGreen: Color,
+    val systemRed: Color,
+    val systemYellow: Color,
+    val isDark: Boolean
+)
 
-internal val SystemGreenLight = Color(0xFF248A3D)
-internal val SystemGreenDark = Color(0xFF30D158)
-internal val SystemRedLight = Color(0xFFD70015)
-internal val SystemRedDark = Color(0xFFFF453A)
-internal val SystemYellowLight = Color(0xFFA05A00)
-internal val SystemYellowDark = Color(0xFFFFD60A)
+// ── Sequoia raw palette values ──────────────────────────────────────────────
 
-// System backgrounds
-internal val SystemBackgroundDark = Color(0xFF000000)
-internal val SecondarySystemBackgroundDark = Color(0xFF1C1C1E)
-internal val TertiarySystemBackgroundDark = Color(0xFF2C2C2E)
-internal val SystemGroupedBackgroundLight = Color(0xFFF2F2F7)
-internal val SecondarySystemGroupedBackgroundLight = Color(0xFFFFFFFF)
+// Moonlight Dark
+private val M_D = ThemeColors(
+    bg = Color(0xFF0F1014),
+    surface = Color(0xFF111216),
+    surfaceElevated = Color(0xFF18191F),
+    surfaceVariant = Color(0xFF1B1C22),
+    fg = Color(0xFF868690),
+    textPrimary = Color(0xFFFDFDFE),
+    caret = Color(0xFFC58FFF),
+    keyword = Color(0xFF8EB6F5),
+    string = Color(0xFF9898A6),
+    function = Color(0xFFF58EE0),
+    variable = Color(0xFFFFBB88),
+    comment = Color(0xFF43444D),
+    outline = Color(0x2EFFFFFF),
+    systemGreen = Color(0xFF30D158),
+    systemRed = Color(0xFFFF453A),
+    systemYellow = Color(0xFFFFD60A),
+    isDark = true
+)
 
-// Labels
-internal val LabelLight = Color(0xFF000000)
-internal val LabelDark = Color(0xFFFFFFFF)
+// Moonlight Light
+private val M_L = ThemeColors(
+    bg = Color(0xFFEDEEF2),
+    surface = Color(0xFFE2E3E8),
+    surfaceElevated = Color(0xFFD8D9DF),
+    surfaceVariant = Color(0xFFD3D4DB),
+    fg = Color(0xFF282930),
+    textPrimary = Color(0xFF121316),
+    caret = Color(0xFF9A5FD9),
+    keyword = Color(0xFF4A85D4),
+    string = Color(0xFF6A6A78),
+    function = Color(0xFFC94DA8),
+    variable = Color(0xFFD9884A),
+    comment = Color(0xFF565760),
+    outline = Color(0x1F282930),
+    systemGreen = Color(0xFF248A3D),
+    systemRed = Color(0xFFD70015),
+    systemYellow = Color(0xFFA05A00),
+    isDark = false
+)
 
-// ── Material 3 Compatibility (kept for Scaffold / text fields) ────────────
+// Monochrome Dark
+private val MC_D = ThemeColors(
+    bg = Color(0xFF0F1014),
+    surface = Color(0xFF111216),
+    surfaceElevated = Color(0xFF18191F),
+    surfaceVariant = Color(0xFF1B1C22),
+    fg = Color(0xFF868690),
+    textPrimary = Color(0xFFFFFFFF),
+    caret = Color(0xFF7C829D),
+    keyword = Color(0xFF626983),
+    string = Color(0xFFD3D5DE),
+    function = Color(0xFF999EB2),
+    variable = Color(0xFFB6BAC8),
+    comment = Color(0xFF43444D),
+    outline = Color(0x2EFFFFFF),
+    systemGreen = Color(0xFF30D158),
+    systemRed = Color(0xFFFF453A),
+    systemYellow = Color(0xFFFFD60A),
+    isDark = true
+)
 
-val PrimaryLight = ForgeOrangeLight
-val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFFFE3CC)
-val OnPrimaryContainerLight = Color(0xFF3D1300)
+// Monochrome Light
+private val MC_L = ThemeColors(
+    bg = Color(0xFFEDEEF2),
+    surface = Color(0xFFE2E3E8),
+    surfaceElevated = Color(0xFFD8D9DF),
+    surfaceVariant = Color(0xFFD3D4DB),
+    fg = Color(0xFF282930),
+    textPrimary = Color(0xFF101114),
+    caret = Color(0xFF5F6370),
+    keyword = Color(0xFF2E3038),
+    string = Color(0xFF50535E),
+    function = Color(0xFF525666),
+    variable = Color(0xFF454752),
+    comment = Color(0xFF9DA2AD),
+    outline = Color(0x1F282930),
+    systemGreen = Color(0xFF248A3D),
+    systemRed = Color(0xFFD70015),
+    systemYellow = Color(0xFFA05A00),
+    isDark = false
+)
 
-val SecondaryLight = Color(0xFF3C3C43)
-val OnSecondaryLight = Color(0xFFFFFFFF)
-val SecondaryContainerLight = Color(0xFFE5E5EA)
-val OnSecondaryContainerLight = Color(0xFF1C1C1E)
+// Retro Dark
+private val R_D = ThemeColors(
+    bg = Color(0xFF0F1014),
+    surface = Color(0xFF111216),
+    surfaceElevated = Color(0xFF18191F),
+    surfaceVariant = Color(0xFF1B1C22),
+    fg = Color(0xFF868690),
+    textPrimary = Color(0xFFF8F6F2),
+    caret = Color(0xFF5C87A4),
+    keyword = Color(0xFF648F68),
+    string = Color(0xFFDA674B),
+    function = Color(0xFF829FA7),
+    variable = Color(0xFFA27E57),
+    comment = Color(0xFF43444D),
+    outline = Color(0x2EFFFFFF),
+    systemGreen = Color(0xFF648F68),
+    systemRed = Color(0xFFDA674B),
+    systemYellow = Color(0xFFD4A359),
+    isDark = true
+)
 
-val BackgroundLight = SystemGroupedBackgroundLight
-val OnBackgroundLight = LabelLight
-val SurfaceLight = SecondarySystemGroupedBackgroundLight
-val OnSurfaceLight = LabelLight
+// Retro Light
+private val R_L = ThemeColors(
+    bg = Color(0xFFEDEEF2),
+    surface = Color(0xFFE2E3E8),
+    surfaceElevated = Color(0xFFD8D9DF),
+    surfaceVariant = Color(0xFFD3D4DB),
+    fg = Color(0xFF282930),
+    textPrimary = Color(0xFF1F1E1B),
+    caret = Color(0xFF456A82),
+    keyword = Color(0xFF4A704E),
+    string = Color(0xFFBF5238),
+    function = Color(0xFF5F7982),
+    variable = Color(0xFF8A6539),
+    comment = Color(0xFF565760),
+    outline = Color(0x1F282930),
+    systemGreen = Color(0xFF4A704E),
+    systemRed = Color(0xFFBF5238),
+    systemYellow = Color(0xFFA05A00),
+    isDark = false
+)
 
-val PrimaryDark = ForgeOrangeDark
-val OnPrimaryDark = Color(0xFF000000)
-val PrimaryContainerDark = Color(0xFF4A2A00)
-val OnPrimaryContainerDark = Color(0xFFFFDDB3)
+// System Dark (Warm Studio Dark — Stitch Guide)
+private val S_D = ThemeColors(
+    bg = Color(0xFF141211),
+    surface = Color(0xFF1D1816),
+    surfaceElevated = Color(0xFF2A221E),
+    surfaceVariant = Color(0xFF231D1A),
+    fg = Color(0xFFB5A8A1),
+    textPrimary = Color(0xFFF7F4F2),
+    caret = Color(0xFFFF8860),
+    keyword = Color(0xFF30D158),
+    string = Color(0xFFE0D5CE),
+    function = Color(0xFF342A25),
+    variable = Color(0xFF231D1A),
+    comment = Color(0xFF6B5F59),
+    outline = Color(0x33D6BEB2),
+    systemGreen = Color(0xFF34C759),
+    systemRed = Color(0xFFFF5A4E),
+    systemYellow = Color(0xFFFFD60A),
+    isDark = true
+)
 
-val SecondaryDark = Color(0xFFEBEBF5)
-val OnSecondaryDark = Color(0xFF1C1C1E)
-val SecondaryContainerDark = TertiarySystemBackgroundDark
-val OnSecondaryContainerDark = LabelDark
+// System Light (Warm Forge Light — Stitch Guide)
+private val S_L = ThemeColors(
+    bg = Color(0xFFF6F6F8),
+    surface = Color(0xFFFFFFFF),
+    surfaceElevated = Color(0xFFF5EAE3),
+    surfaceVariant = Color(0xFFFCF7F4),
+    fg = Color(0xFF5D4D45),
+    textPrimary = Color(0xFF1A1412),
+    caret = Color(0xFFC83700),
+    keyword = Color(0xFF248A3D),
+    string = Color(0xFF5D4D45),
+    function = Color(0xFFEFE4DD),
+    variable = Color(0xFF231D1A),
+    comment = Color(0xFF9E8D84),
+    outline = Color(0x2EA88A7C),
+    systemGreen = Color(0xFF28B44D),
+    systemRed = Color(0xFFD70015),
+    systemYellow = Color(0xFFA05A00),
+    isDark = false
+)
 
-val BackgroundDark = SystemBackgroundDark
-val OnBackgroundDark = LabelDark
-val SurfaceDark = SecondarySystemBackgroundDark
-val OnSurfaceDark = LabelDark
+// ── Resolver Function ───────────────────────────────────────────────────────
 
-// ── Accents (adaptive) ────────────────────────────────────────────────────
+fun resolveThemeColors(mode: ThemeMode, isSysDark: Boolean): ThemeColors {
+    return when (mode) {
+        ThemeMode.MOONLIGHT_DARK -> M_D
+        ThemeMode.MOONLIGHT_LIGHT -> M_L
+        ThemeMode.MONOCHROME_DARK -> MC_D
+        ThemeMode.MONOCHROME_LIGHT -> MC_L
+        ThemeMode.RETRO_DARK -> R_D
+        ThemeMode.RETRO_LIGHT -> R_L
+        ThemeMode.SYSTEM -> if (isSysDark) S_D else S_L
+    }
+}
 
-/** The single interactive tint (buttons, selection, active icons, progress). */
+fun isThemeDark(mode: ThemeMode, isSysDark: Boolean): Boolean {
+    return when (mode) {
+        ThemeMode.MOONLIGHT_DARK, ThemeMode.MONOCHROME_DARK, ThemeMode.RETRO_DARK -> true
+        ThemeMode.MOONLIGHT_LIGHT, ThemeMode.MONOCHROME_LIGHT, ThemeMode.RETRO_LIGHT -> false
+        ThemeMode.SYSTEM -> isSysDark
+    }
+}
+
+@Composable
+@ReadOnlyComposable
+fun isThemeDark(): Boolean {
+    return isThemeDark(LocalRiffTheme.current, isSystemInDarkTheme())
+}
+
+val CurrentThemeColors: ThemeColors
+    @Composable
+    @ReadOnlyComposable
+    get() = resolveThemeColors(LocalRiffTheme.current, isSystemInDarkTheme())
+
+private val tc: ThemeColors
+    @Composable
+    @ReadOnlyComposable
+    get() = CurrentThemeColors
+
+// ── Semantic Tokens ─────────────────────────────────────────────────────────
+
 val AccentTint: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) ForgeOrangeDark else ForgeOrangeLight
+    @Composable @ReadOnlyComposable get() = tc.caret
 
-/** Foreground for content placed on a solid [AccentTint] fill. */
 val OnAccent: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0xFF000000) else Color(0xFFFFFFFF)
+    @Composable @ReadOnlyComposable get() = if (isColorLight(tc.caret)) Color.Black else Color.White
 
-/** Success / in tune / correct. */
 val SystemGreen: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) SystemGreenDark else SystemGreenLight
+    @Composable @ReadOnlyComposable get() = tc.systemGreen
 
-/** Error / destructive / out of tune. */
 val SystemRed: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) SystemRedDark else SystemRedLight
+    @Composable @ReadOnlyComposable get() = tc.systemRed
 
-/** Warning / highlight / streaks. */
 val SystemYellow: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) SystemYellowDark else SystemYellowLight
+    @Composable @ReadOnlyComposable get() = tc.systemYellow
 
-// ── Backgrounds ───────────────────────────────────────────────────────────
+// ── Backgrounds & Glass Materials ───────────────────────────────────────────
 
-/** Base canvas behind every glass panel. */
 val GlassBackgroundBase: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) SystemBackgroundDark else SystemGroupedBackgroundLight
+    @Composable @ReadOnlyComposable get() = tc.bg
 
-/** Very soft ambient light behind the glass so the material has something to refract. */
 val GlassAmbientLight: Color
-    @Composable @ReadOnlyComposable get() =
-        if (isDark) ForgeOrangeDark.copy(alpha = 0.10f) else ForgeOrangeDark.copy(alpha = 0.08f)
+    @Composable @ReadOnlyComposable get() = tc.caret.copy(alpha = if (tc.isDark) 0.10f else 0.08f)
 
-// ── Liquid Glass materials (adaptive, neutral) ────────────────────────────
-
-/** Content glass (cards) — thick material, close to secondarySystemBackground. */
 val GlassSurface: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0xD91C1C1E) else Color(0xE6FFFFFF)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) tc.surface.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f)
 
-/** Elevated glass (hero cards, sheets) — tertiary level. */
 val GlassSurfaceElevated: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0xE62C2C2E) else Color(0xF7FFFFFF)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) tc.surfaceElevated.copy(alpha = 0.90f) else Color.White.copy(alpha = 0.95f)
 
-/** Thin glass for floating controls (tab bar, glass buttons). */
 val GlassSurfaceThin: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0xB81C1C1E) else Color(0xC7FFFFFF)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) tc.surface.copy(alpha = 0.70f) else Color.White.copy(alpha = 0.75f)
 
-/** Fill for unselected chips / segments — systemFill (tertiary). */
 val GlassSurfaceDim: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x3D767680) else Color(0x1F767680)
+    @Composable @ReadOnlyComposable get() = tc.variable.copy(alpha = 0.18f)
 
-/** Hairline separator. */
 val GlassSeparator: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x2EFFFFFF) else Color(0x1F3C3C43)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f)
 
-// Specular rim — light hits the top-leading edge and fades out.
 val GlassEdgeHighlightStart: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x3DFFFFFF) else Color(0xFFFFFFFF)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color.White.copy(alpha = 0.20f) else Color.White
+
 val GlassEdgeHighlightMid: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x14FFFFFF) else Color(0x0A000000)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.03f)
+
 val GlassEdgeHighlightEnd: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x0AFFFFFF) else Color(0x14000000)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color.White.copy(alpha = 0.03f) else Color.Black.copy(alpha = 0.06f)
 
-// Neutral soft shadows (Apple never tints shadows)
 val GlassShadow: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x99000000) else Color(0x24000000)
-val GlassShadowElevated: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0xB3000000) else Color(0x2E000000)
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color(0x99000000) else Color(0x24000000)
 
-// ── Labels (adaptive, HIG label / secondaryLabel / tertiaryLabel) ─────────
+val GlassShadowElevated: Color
+    @Composable @ReadOnlyComposable get() = if (tc.isDark) Color(0xB3000000) else Color(0x2E000000)
+
+// ── Text on Glass ───────────────────────────────────────────────────────────
 
 val TextOnGlassPrimary: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) LabelDark else LabelLight
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
 val TextOnGlassSecondary: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x99EBEBF5) else Color(0x993C3C43)
+    @Composable @ReadOnlyComposable get() = tc.fg
+
 val TextOnGlassDim: Color
-    @Composable @ReadOnlyComposable get() = if (isDark) Color(0x70EBEBF5) else Color(0x7A3C3C43)
+    @Composable @ReadOnlyComposable get() = tc.comment
+
+// ── Material 3 Compatibility Tokens ─────────────────────────────────────────
+
+val PrimaryLight: Color
+    @Composable @ReadOnlyComposable get() = tc.caret
+val OnPrimaryLight: Color
+    @Composable @ReadOnlyComposable get() = OnAccent
+val PrimaryContainerLight: Color
+    @Composable @ReadOnlyComposable get() = tc.caret.copy(alpha = 0.15f)
+val OnPrimaryContainerLight: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+val SecondaryLight: Color
+    @Composable @ReadOnlyComposable get() = tc.keyword
+val OnSecondaryLight: Color
+    @Composable @ReadOnlyComposable get() = if (isColorLight(tc.keyword)) Color.Black else Color.White
+val SecondaryContainerLight: Color
+    @Composable @ReadOnlyComposable get() = tc.keyword.copy(alpha = 0.15f)
+val OnSecondaryContainerLight: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+val BackgroundLight: Color
+    @Composable @ReadOnlyComposable get() = tc.bg
+val OnBackgroundLight: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+val SurfaceLight: Color
+    @Composable @ReadOnlyComposable get() = tc.surface
+val OnSurfaceLight: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+val PrimaryDark: Color
+    @Composable @ReadOnlyComposable get() = tc.caret
+val OnPrimaryDark: Color
+    @Composable @ReadOnlyComposable get() = OnAccent
+val PrimaryContainerDark: Color
+    @Composable @ReadOnlyComposable get() = tc.caret.copy(alpha = 0.22f)
+val OnPrimaryContainerDark: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+val SecondaryDark: Color
+    @Composable @ReadOnlyComposable get() = tc.keyword
+val OnSecondaryDark: Color
+    @Composable @ReadOnlyComposable get() = if (isColorLight(tc.keyword)) Color.Black else Color.White
+val SecondaryContainerDark: Color
+    @Composable @ReadOnlyComposable get() = tc.keyword.copy(alpha = 0.22f)
+val OnSecondaryContainerDark: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+val BackgroundDark: Color
+    @Composable @ReadOnlyComposable get() = tc.bg
+val OnBackgroundDark: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+val SurfaceDark: Color
+    @Composable @ReadOnlyComposable get() = tc.surface
+val OnSurfaceDark: Color
+    @Composable @ReadOnlyComposable get() = tc.textPrimary
+
+// ── Legacy Aliases ──────────────────────────────────────────────────────────
+
+val ForgeOrangeLight = Color(0xFFC93400)
+val ForgeOrangeDark = Color(0xFFFF9F0A)
+val SystemGreenLight = Color(0xFF248A3D)
+val SystemGreenDark = Color(0xFF30D158)
+val SystemRedLight = Color(0xFFD70015)
+val SystemRedDark = Color(0xFFFF453A)
+val SystemYellowLight = Color(0xFFA05A00)
+val SystemYellowDark = Color(0xFFFFD60A)
+
+val SystemBackgroundDark: Color @Composable @ReadOnlyComposable get() = tc.bg
+val SecondarySystemBackgroundDark: Color @Composable @ReadOnlyComposable get() = tc.surfaceVariant
+val TertiarySystemBackgroundDark: Color @Composable @ReadOnlyComposable get() = tc.surfaceElevated
+val SystemGroupedBackgroundLight: Color @Composable @ReadOnlyComposable get() = tc.bg
+val SecondarySystemGroupedBackgroundLight: Color @Composable @ReadOnlyComposable get() = tc.surfaceVariant
+
+val GlassBackgroundBaseDark: Color @Composable @ReadOnlyComposable get() = tc.bg
+val GlassBackgroundBaseLight: Color @Composable @ReadOnlyComposable get() = tc.bg
+val GlassAmbientLightDark: Color @Composable @ReadOnlyComposable get() = tc.caret.copy(alpha = 0.10f)
+val GlassAmbientLightLight: Color @Composable @ReadOnlyComposable get() = tc.caret.copy(alpha = 0.08f)
+
+val GlassSurfaceLightDim: Color @Composable @ReadOnlyComposable get() = tc.variable.copy(alpha = 0.18f)
+val GlassSurfaceDarkDim: Color @Composable @ReadOnlyComposable get() = tc.variable.copy(alpha = 0.18f)
+val GlassSurfaceElevatedLight: Color @Composable @ReadOnlyComposable get() = GlassSurfaceElevated
+val GlassSurfaceElevatedDark: Color @Composable @ReadOnlyComposable get() = GlassSurfaceElevated
+val GlassSurfaceThinLight: Color @Composable @ReadOnlyComposable get() = GlassSurfaceThin
+val GlassSurfaceThinDark: Color @Composable @ReadOnlyComposable get() = GlassSurfaceThin
+
+val GlassSeparatorLight: Color @Composable @ReadOnlyComposable get() = GlassSeparator
+val GlassSeparatorDark: Color @Composable @ReadOnlyComposable get() = GlassSeparator
+
+val GlassEdgeDarkStart: Color @Composable @ReadOnlyComposable get() = GlassEdgeHighlightStart
+val GlassEdgeDarkMid: Color @Composable @ReadOnlyComposable get() = GlassEdgeHighlightMid
+val GlassEdgeDarkEnd: Color @Composable @ReadOnlyComposable get() = GlassEdgeHighlightEnd
+
+val TextOnGlassPrimaryLight: Color @Composable @ReadOnlyComposable get() = tc.textPrimary
+val TextOnGlassSecondaryLight: Color @Composable @ReadOnlyComposable get() = tc.fg
+val TextOnGlassDimLight: Color @Composable @ReadOnlyComposable get() = tc.comment
+val TextOnGlassPrimaryDark: Color @Composable @ReadOnlyComposable get() = tc.textPrimary
+val TextOnGlassSecondaryDark: Color @Composable @ReadOnlyComposable get() = tc.fg
+val TextOnGlassDimDark: Color @Composable @ReadOnlyComposable get() = tc.comment
