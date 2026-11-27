@@ -5,9 +5,12 @@ import com.riffforge.feature_setlists.data.repository.SetlistRepositoryImpl
 import com.riffforge.feature_setlists.domain.repository.SetlistRepository
 import com.riffforge.feature_setlists.domain.use_case.AddSetlistUseCase
 import com.riffforge.feature_setlists.domain.use_case.AddSongToSetlistUseCase
+import com.riffforge.feature_setlists.domain.use_case.DeleteSetlistUseCase
 import com.riffforge.feature_setlists.domain.use_case.GetSetlistByIdUseCase
 import com.riffforge.feature_setlists.domain.use_case.GetSetlistsUseCase
+import com.riffforge.feature_setlists.domain.use_case.RemoveSongFromSetlistUseCase
 import com.riffforge.feature_setlists.domain.use_case.SetlistUseCases
+import com.riffforge.feature_setlists.domain.use_case.UpdateSetlistUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,7 +42,10 @@ object SetlistModule {
             getSetlists = GetSetlistsUseCase(repository),
             getSetlistById = GetSetlistByIdUseCase(repository),
             addSetlist = AddSetlistUseCase(repository),
-            addSongToSetlist = AddSongToSetlistUseCase(repository)
+            updateSetlist = UpdateSetlistUseCase(repository),
+            deleteSetlist = DeleteSetlistUseCase(repository),
+            addSongToSetlist = AddSongToSetlistUseCase(repository),
+            removeSongFromSetlist = RemoveSongFromSetlistUseCase(repository)
         )
     }
 }

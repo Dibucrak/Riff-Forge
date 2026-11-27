@@ -6,8 +6,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -35,42 +34,51 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.riffforge.core.presentation.components.GlassBackground
-import com.riffforge.core.presentation.components.GlassCard
-import com.riffforge.core.presentation.components.GlassCardElevated
-import com.riffforge.core.presentation.components.GlassStatChip
-import com.riffforge.core.presentation.theme.*
+import com.riffforge.core.presentation.theme.SystemRed
 import com.riffforge.feature_songs.domain.util.ChordTransposer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongViewerScreen(
     onNavigateUp: () -> Unit,
@@ -82,14 +90,35 @@ fun SongViewerScreen(
     val state = viewModel.state.value
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
-    val edgeColors = if (isDarkTheme) {
-        listOf(GlassEdgeDarkStart, GlassEdgeDarkMid, GlassEdgeDarkEnd)
-    } else {
-        listOf(GlassEdgeHighlightStart, GlassEdgeHighlightMid, GlassEdgeHighlightEnd)
+    val globalUseSpanish = com.riffforge.core.domain.util.AppSettings.useSpanishNotation
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(globalUseSpanish) {
+        viewModel.syncNotationWithGlobalSetting(globalUseSpanish)
     }
-    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
+
+    if (showDeleteDialog && state.song != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("¿Eliminar canción local?", fontWeight = FontWeight.Bold) },
+            text = { Text("Se eliminará \"${state.song.title}\" de tu dispositivo.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.onEvent(SongViewerEvent.DeleteSong)
+                        showDeleteDialog = false
+                        onNavigateUp()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Eliminar", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
 
     DisposableEffect(Unit) {
         val activity = context as? Activity
@@ -102,100 +131,103 @@ fun SongViewerScreen(
     LaunchedEffect(state.isAutoScrolling, state.scrollSpeed) {
         if (state.isAutoScrolling) {
             while (isActive) {
-                val currentScroll = scrollState.value
-                val maxScroll = scrollState.maxValue
-                if (currentScroll < maxScroll) {
-                    scrollState.animateScrollTo(
-                        value = currentScroll + (state.scrollSpeed * 10),
-                        animationSpec = tween(durationMillis = 100, easing = LinearEasing)
-                    )
-                } else {
-                    viewModel.onEvent(SongViewerEvent.ToggleAutoScroll)
-                    break
+                if (!scrollState.isScrollInProgress) {
+                    val currentScroll = scrollState.value
+                    val maxScroll = scrollState.maxValue
+                    if (currentScroll < maxScroll) {
+                        scrollState.animateScrollTo(
+                            value = currentScroll + (state.scrollSpeed * 8f).toInt().coerceAtLeast(2),
+                            animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+                        )
+                    } else {
+                        viewModel.onEvent(SongViewerEvent.ToggleAutoScroll)
+                        break
+                    }
                 }
-                delay(10)
+                delay(16)
             }
         }
     }
 
-    GlassBackground(isDarkTheme = isDarkTheme) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Top bar — glassmorphic header
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                isDarkTheme = isDarkTheme,
-                cornerRadius = 16.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onNavigateUp,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = glassSurface.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar", tint = textColor)
-                    }
-                    Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
                         Text(
-                            text = state.song?.title ?: "Cargando...",
+                            text = state.song?.title ?: "Canción",
+                            fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Text(
-                            text = state.song?.artist ?: "",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = dimTextColor
-                        )
+                        if (!state.song?.artist.isNullOrBlank()) {
+                            Text(
+                                text = state.song?.artist ?: "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
-                    IconButton(
-                        onClick = { viewModel.onEvent(SongViewerEvent.ToggleFlats) },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = glassSurface.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = "Cambiar #/b",
-                            tint = if (state.preferFlats) AccentTint else dimTextColor
-                        )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
                     }
-                    IconButton(
-                        onClick = { viewModel.onEvent(SongViewerEvent.ToggleSpanishNotation) },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (state.useSpanishNotation) AccentTint.copy(alpha = 0.3f) else glassSurface.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Text(
-                            text = if (state.useSpanishNotation) "Do" else "C",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (state.useSpanishNotation) AccentTint else dimTextColor
-                        )
+                },
+                actions = {
+                    // Notation toggle (Do / C)
+                    IconButton(onClick = { viewModel.onEvent(SongViewerEvent.ToggleSpanishNotation) }) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (state.useSpanishNotation) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (state.useSpanishNotation) "Do" else "C",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (state.useSpanishNotation) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    IconButton(
-                        onClick = { state.song?.id?.let { onNavigateToEdit(it) } },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = glassSurface.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar", tint = textColor)
+                    if (state.song != null) {
+                        IconButton(onClick = { onNavigateToEdit(state.song.id) }) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar")
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Eliminar Canción",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
-                }
-            }
-
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             if (state.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = AccentTint
+                    color = MaterialTheme.colorScheme.primary
                 )
             } else if (state.song == null) {
                 Text(
@@ -207,69 +239,111 @@ fun SongViewerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(start = 16.dp, top = 112.dp, end = 16.dp)
+                        .padding(horizontal = 20.dp)
                         .verticalScroll(scrollState)
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // Song info chips
-                    Row(
+                    // ── Metadatos de la Canción ──────────────────────────────
+                    ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     ) {
-                        GlassStatChip(
-                            isDarkTheme = isDarkTheme,
-                            icon = {},
-                            label = {
-                                val shiftedNote = ChordTransposer.shiftNote(state.song.key, state.transposeSemitones, state.preferFlats)
-                                val displayName = ChordTransposer.getNoteDisplayName(shiftedNote, state.useSpanishNotation)
-                                Text("Tono: $displayName", fontWeight = FontWeight.Bold, color = textColor)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val netShift = state.transposeSemitones - state.capo
+                            val shiftedNote = ChordTransposer.shiftNote(state.song.key, netShift, state.preferFlats)
+                            val displayName = ChordTransposer.getNoteDisplayName(shiftedNote, state.useSpanishNotation)
+
+                            Column {
+                                Text("Tono", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(displayName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
-                        )
-                        GlassStatChip(
-                            isDarkTheme = isDarkTheme,
-                            icon = {},
-                            label = {
-                                Text("Afinación: ${state.song.tuning}", color = textColor)
+                            Column {
+                                Text("Afinación", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(state.song.tuning, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
-                        )
-                        GlassStatChip(
-                            isDarkTheme = isDarkTheme,
-                            icon = {},
-                            label = {
-                                Text("${state.song.bpm} BPM", color = textColor)
+                            Column {
+                                Text("Tempo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${state.song.bpm} BPM", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
-                        )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = state.displayedContent.ifBlank { "Sin contenido (Edita la canción para añadir letra y acordes)." },
-                        fontSize = state.textSizeSp.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = textColor,
-                        lineHeight = (state.textSizeSp * 1.5).sp
-                    )
+                    // ── Letra y Acordes ──────────────────────────────
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp)
+                        ) {
+                            val chordColor = MaterialTheme.colorScheme.primary
+                            val highlightedContent = remember(state.displayedContent, state.useSpanishNotation, chordColor) {
+                                buildHighlightedLyricsAndroid(
+                                    content = state.displayedContent,
+                                    useSpanish = state.useSpanishNotation,
+                                    chordColor = chordColor
+                                )
+                            }
+                            if (state.displayedContent.isBlank()) {
+                                Text(
+                                    text = "Sin contenido (Edita la canción para añadir letra y acordes).",
+                                    fontSize = state.textSizeSp.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = (state.textSizeSp * 1.5).sp
+                                )
+                            } else {
+                                Text(
+                                    text = highlightedContent,
+                                    fontSize = state.textSizeSp.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = (state.textSizeSp * 1.5).sp
+                                )
+                            }
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.height(180.dp))
+                    // Spacer to clear floating bottom controls (taller when setlist bar is visible)
+                    Spacer(modifier = Modifier.height(if (state.currentSetlistId != null) 244.dp else 184.dp))
                 }
             }
 
-            // Bottom controls — glassmorphic panel
+            // ── Floating Bottom Controls ──────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                // Setlist navigation
+                // Setlist stepper
                 if (state.currentSetlistId != null) {
-                    GlassCard(
+                    ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        isDarkTheme = isDarkTheme,
-                        cornerRadius = 16.dp
+                            .padding(bottom = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     ) {
                         Row(
                             modifier = Modifier
@@ -282,33 +356,26 @@ fun SongViewerScreen(
                                 onClick = {
                                     state.previousSongId?.let { onNavigateToSong(it, state.currentSetlistId) }
                                 },
-                                enabled = state.previousSongId != null,
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = glassSurface.copy(alpha = 0.3f),
-                                    disabledContainerColor = glassSurface.copy(alpha = 0.1f)
-                                )
+                                enabled = state.previousSongId != null
                             ) {
-                                Icon(
-                                    Icons.Default.SkipPrevious, contentDescription = "Anterior",
-                                    tint = if (state.previousSongId != null) AccentTint else dimTextColor.copy(alpha = 0.3f)
-                                )
+                                Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior")
                             }
 
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(14.dp), tint = AccentTint)
+                                    Icon(Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = state.setlistName ?: "Setlist",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = textColor
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                                 Text(
                                     text = "Pista ${state.currentSongIndex + 1} de ${state.totalSongsInSet}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = dimTextColor
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
@@ -316,156 +383,173 @@ fun SongViewerScreen(
                                 onClick = {
                                     state.nextSongId?.let { onNavigateToSong(it, state.currentSetlistId) }
                                 },
-                                enabled = state.nextSongId != null,
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = glassSurface.copy(alpha = 0.3f),
-                                    disabledContainerColor = glassSurface.copy(alpha = 0.1f)
-                                )
+                                enabled = state.nextSongId != null
                             ) {
-                                Icon(
-                                    Icons.Default.SkipNext, contentDescription = "Siguiente",
-                                    tint = if (state.nextSongId != null) AccentTint else dimTextColor.copy(alpha = 0.3f)
-                                )
+                                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente")
                             }
                         }
                     }
                 }
 
-                // Controls panel
-                GlassCardElevated(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    isDarkTheme = isDarkTheme,
-                    cornerRadius = 24.dp
+                // Controls Panel
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        // Transpose & Capo row
+                        // Transposition & Capo Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Tono:", style = MaterialTheme.typography.labelMedium, color = dimTextColor)
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.TransposeDown) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Bajar Tono", tint = textColor, modifier = Modifier.padding(4.dp))
+                                Text("Tono:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.TransposeDown) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Bajar Tono", modifier = Modifier.size(18.dp))
                                 }
                                 Text(
                                     text = if (state.transposeSemitones > 0) "+${state.transposeSemitones}" else "${state.transposeSemitones}",
                                     fontWeight = FontWeight.Bold,
-                                    color = AccentTint
+                                    color = MaterialTheme.colorScheme.primary
                                 )
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.TransposeUp) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Subir Tono", tint = textColor, modifier = Modifier.padding(4.dp))
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.TransposeUp) }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Subir Tono", modifier = Modifier.size(18.dp))
                                 }
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Capo:", style = MaterialTheme.typography.labelMedium, color = dimTextColor)
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.CapoDown) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Bajar Capo", tint = textColor, modifier = Modifier.padding(4.dp))
+                                Text("Capo:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.CapoDown) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Bajar Capo", modifier = Modifier.size(18.dp))
                                 }
                                 Text(
                                     text = "${state.capo}",
                                     fontWeight = FontWeight.Bold,
-                                    color = AccentTint
+                                    color = MaterialTheme.colorScheme.primary
                                 )
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.CapoUp) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Subir Capo", tint = textColor, modifier = Modifier.padding(4.dp))
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.CapoUp) }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Subir Capo", modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
 
-                        Divider(modifier = Modifier.padding(vertical = 4.dp), color = glassSurface.copy(alpha = 0.3f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
 
-                        // Text size, AutoScroll, Speed row
+                        // Text size, AutoScroll FAB, Speed Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row {
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.DecreaseTextSize) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.TextDecrease, contentDescription = "Texto menor", tint = textColor)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseTextSize) }) {
+                                    Icon(Icons.Default.TextDecrease, contentDescription = "Texto menor")
                                 }
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.IncreaseTextSize) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseTextSize) }) {
+                                    Icon(Icons.Default.TextIncrease, contentDescription = "Texto mayor")
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (state.preferFlats) MaterialTheme.colorScheme.primaryContainer
+                                            else MaterialTheme.colorScheme.surface
+                                        )
+                                        .clickable { viewModel.onEvent(SongViewerEvent.ToggleFlats) }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Icon(Icons.Default.TextIncrease, contentDescription = "Texto mayor", tint = textColor)
+                                    Text(
+                                        text = if (state.preferFlats) "b" else "#",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (state.preferFlats) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
 
-                            // AutoScroll button — gradient FAB with press dimming
-                            val autoScrollInteraction = remember { MutableInteractionSource() }
-                            val autoScrollPressed = autoScrollInteraction.collectIsPressedAsState()
+                            // AutoScroll button
                             Box(
                                 modifier = Modifier
-                                    .size(52.dp)
-                                    .shadow(8.dp, CircleShape, spotColor = GlassShadow, ambientColor = GlassShadow)
+                                    .size(48.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        AccentTint,
-                                        CircleShape
-                                    )
-                                    .graphicsLayer {
-                                        alpha = if (autoScrollPressed.value) 0.6f else 1f
-                                    }
-                                    .clickable(
-                                        interactionSource = autoScrollInteraction,
-                                        indication = null,
-                                        onClick = { viewModel.onEvent(SongViewerEvent.ToggleAutoScroll) }
-                                    ),
+                                    .background(MaterialTheme.colorScheme.primary)
+                                    .clickable { viewModel.onEvent(SongViewerEvent.ToggleAutoScroll) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = if (state.isAutoScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = "AutoScroll",
-                                    tint = OnAccent
+                                    tint = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.DecreaseSpeed) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.FastRewind, contentDescription = "Más lento", tint = textColor)
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.DecreaseSpeed) }) {
+                                    Icon(Icons.Default.FastRewind, contentDescription = "Más lento")
+                                }
+                                val speedText = if (state.scrollSpeed % 1f == 0f) {
+                                    "${state.scrollSpeed.toInt()}x"
+                                } else {
+                                    "${state.scrollSpeed}x"
                                 }
                                 Text(
-                                    text = "${state.scrollSpeed}x",
+                                    text = speedText,
                                     fontWeight = FontWeight.Bold,
-                                    color = AccentTint
+                                    color = MaterialTheme.colorScheme.primary
                                 )
-                                IconButton(
-                                    onClick = { viewModel.onEvent(SongViewerEvent.IncreaseSpeed) },
-                                    colors = IconButtonDefaults.iconButtonColors(containerColor = glassSurface.copy(alpha = 0.3f))
-                                ) {
-                                    Icon(Icons.Default.FastForward, contentDescription = "Más rápido", tint = textColor)
+                                IconButton(onClick = { viewModel.onEvent(SongViewerEvent.IncreaseSpeed) }) {
+                                    Icon(Icons.Default.FastForward, contentDescription = "Más rápido")
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+private fun buildHighlightedLyricsAndroid(
+    content: String,
+    useSpanish: Boolean,
+    chordColor: Color
+): AnnotatedString {
+    val chordRegex = if (useSpanish) ChordTransposer.spanishChordRegex else ChordTransposer.chordRegex
+    return buildAnnotatedString {
+        val lines = content.split("\n")
+        lines.forEachIndexed { lineIdx, line ->
+            val lineStart = length
+            append(line)
+            if (line.contains("[") && line.contains("]")) {
+                Regex("""\[([^\]]+)\]""").findAll(line).forEach { bracketMatch ->
+                    val inner = bracketMatch.groupValues[1].trim()
+                    val innerTokens = inner.split(Regex("""\s+""")).filter { it.isNotEmpty() }
+                    if (innerTokens.isNotEmpty() && innerTokens.all { chordRegex.matches(it) }) {
+                        addStyle(
+                            style = SpanStyle(color = chordColor, fontWeight = FontWeight.Bold),
+                            start = lineStart + bracketMatch.range.first,
+                            end = lineStart + bracketMatch.range.last + 1
+                        )
+                    }
+                }
+            } else if (ChordTransposer.isChordLine(line, toSpanish = !useSpanish)) {
+                chordRegex.findAll(line).forEach { match ->
+                    addStyle(
+                        style = SpanStyle(color = chordColor, fontWeight = FontWeight.Bold),
+                        start = lineStart + match.range.first,
+                        end = lineStart + match.range.last + 1
+                    )
+                }
+            }
+            if (lineIdx < lines.lastIndex) append("\n")
         }
     }
 }

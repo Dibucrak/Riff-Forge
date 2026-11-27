@@ -15,6 +15,18 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :id")
     suspend fun getSongById(id: Int): SongEntity?
 
+    @Query("SELECT * FROM songs WHERE id = :id")
+    fun observeSongById(id: Int): Flow<SongEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSong(song: SongEntity)
+
+    @Query("DELETE FROM setlist_song_cross_ref WHERE songId = :songId")
+    suspend fun deleteSongFromAllSetlists(songId: Int)
+
+    @Query("DELETE FROM songs WHERE id = :songId")
+    suspend fun deleteSongById(songId: Int)
+
+    @Query("DELETE FROM songs")
+    suspend fun deleteAllSongs()
 }

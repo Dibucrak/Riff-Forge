@@ -4,4 +4,5 @@ sealed class TunerEvent {
     object StartListening : TunerEvent()
     object StopListening : TunerEvent()
     data class PermissionResult(val isGranted: Boolean) : TunerEvent()
+    data class SetTargetFrequency(val targetFreq: Float?) : TunerEvent()
 }

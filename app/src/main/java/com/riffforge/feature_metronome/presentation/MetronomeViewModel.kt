@@ -1,7 +1,7 @@
 package com.riffforge.feature_metronome.presentation
 
+import android.media.AudioAttributes
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioTrack
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -13,8 +13,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
+import kotlin.math.tanh
 
 @HiltViewModel
 class MetronomeViewModel @Inject constructor() : ViewModel() {
@@ -23,73 +26,33 @@ class MetronomeViewModel @Inject constructor() : ViewModel() {
     val state: State<MetronomeState> = _state
 
     private var tickerJob: Job? = null
+    private val trackCache = mutableMapOf<Pair<MetronomeSound, Boolean>, AudioTrack>()
 
-    private val SAMPLE_RATE = 44100
-
-    /**
-     * Generate a realistic metronome click sound using a short noise burst
-     * with a high-frequency tone, similar to iOS metronome apps.
-     */
-    private fun generateClick(isAccent: Boolean): ShortArray {
-        val durationMs = if (isAccent) 40 else 25
-        val numSamples = (durationMs * SAMPLE_RATE) / 1000
-        val click = ShortArray(numSamples)
-
-        val freq = if (isAccent) 1000.0 else 600.0
-        val volume = if (isAccent) 0.6 else 0.35
-
-        for (i in 0 until numSamples) {
-            val time = i.toDouble() / SAMPLE_RATE
-            // Fast attack + exponential decay envelope
-            val envelope = exp(-30.0 * time)
-            // Mix of tone and noise for realistic click
-            val tone = sin(2 * Math.PI * freq * time)
-            val noise = (Math.random() * 2 - 1) * 0.15
-            val sample = (tone * 0.85 + noise) * envelope * volume
-            click[i] = (sample * 32767).toInt().toShort()
-        }
-        return click
-    }
-
-    // Pre-generate click sounds
-    private val accentClick by lazy { generateClick(true) }
-    private val regularClick by lazy { generateClick(false) }
-
-    // Reusable AudioTrack instances to avoid creation/destruction overhead on every beat
-    private var accentTrack: AudioTrack? = null
-    private var regularTrack: AudioTrack? = null
-
-    private fun getAudioTrack(isAccent: Boolean): AudioTrack {
-        return if (isAccent) {
-            accentTrack ?: run {
-                val track = AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT, accentClick.size,
-                    AudioTrack.MODE_STATIC
-                )
-                track.write(accentClick, 0, accentClick.size)
-                accentTrack = track
-                track
-            }
-        } else {
-            regularTrack ?: run {
-                val track = AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT, regularClick.size,
-                    AudioTrack.MODE_STATIC
-                )
-                track.write(regularClick, 0, regularClick.size)
-                regularTrack = track
-                track
-            }
+    private fun getAudioTrack(isAccent: Boolean, sound: MetronomeSound): AudioTrack {
+        val key = sound to isAccent
+        return trackCache[key] ?: run {
+            val pcm = generateClickPcm(isAccent, sound)
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            val format = AudioFormat.Builder()
+                .setSampleRate(SAMPLE_RATE)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+            AudioTrack.Builder()
+                .setAudioAttributes(attrs)
+                .setAudioFormat(format)
+                .setBufferSizeInBytes(pcm.size * 2)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+                .apply {
+                    write(pcm, 0, pcm.size)
+                    trackCache[key] = this
+                }
         }
     }
-
-    // Duration of click sounds in ms, used to compensate delay for accurate timing
-    private val accentClickDurationMs = 40L
-    private val regularClickDurationMs = 25L
 
     fun onEvent(event: MetronomeEvent) {
         when (event) {
@@ -106,13 +69,20 @@ class MetronomeViewModel @Inject constructor() : ViewModel() {
                 }
             }
             is MetronomeEvent.ChangeBpm -> {
-                _state.value = state.value.copy(bpm = event.bpm)
+                _state.value = state.value.copy(bpm = event.bpm.coerceIn(30, 260))
             }
             is MetronomeEvent.ChangeBeatsPerMeasure -> {
                 _state.value = state.value.copy(
-                    beatsPerMeasure = event.beats,
+                    beatsPerMeasure = event.beats.coerceIn(2, 12),
                     currentBeat = 1
                 )
+            }
+            is MetronomeEvent.ChangeSound -> {
+                val wasPlaying = _state.value.isPlaying
+                _state.value = state.value.copy(sound = event.sound)
+                if (!wasPlaying) {
+                    playTick(isFirstBeat = true, sound = event.sound)
+                }
             }
         }
     }
@@ -120,27 +90,26 @@ class MetronomeViewModel @Inject constructor() : ViewModel() {
     private fun startTicker() {
         tickerJob?.cancel()
         tickerJob = viewModelScope.launch {
+            var nextTickNs = System.nanoTime()
             while (isActive && _state.value.isPlaying) {
-                val isFirstBeat = _state.value.currentBeat == 1
-                playTick(isFirstBeat)
+                val snap = _state.value
+                val isFirstBeat = snap.currentBeat == 1
+                playTick(isFirstBeat, snap.sound)
 
-                // Calculate exact interval between beats in ms
-                val intervalMs = 60000L / _state.value.bpm
-                // Compensate for the click sound duration so the next beat starts
-                // exactly at the interval, not after the sound finishes playing
-                val clickDuration = if (isFirstBeat) accentClickDurationMs else regularClickDurationMs
-                val waitMs = intervalMs - clickDuration
-                if (waitMs > 0) {
-                    delay(waitMs)
-                }
+                val safeBpm = snap.bpm.coerceIn(30, 260)
+                val intervalNs = 60_000_000_000L / safeBpm
+                nextTickNs += intervalNs
 
-                val nextBeat = if (_state.value.currentBeat >= _state.value.beatsPerMeasure) {
+                val waitMs = ((nextTickNs - System.nanoTime()) / 1_000_000L).coerceAtLeast(1L)
+                delay(waitMs)
+
+                val current = _state.value
+                val nextBeat = if (current.currentBeat >= current.beatsPerMeasure) {
                     1
                 } else {
-                    _state.value.currentBeat + 1
+                    current.currentBeat + 1
                 }
-
-                _state.value = state.value.copy(currentBeat = nextBeat)
+                _state.value = current.copy(currentBeat = nextBeat)
             }
         }
     }
@@ -149,19 +118,130 @@ class MetronomeViewModel @Inject constructor() : ViewModel() {
         tickerJob?.cancel()
     }
 
-    private fun playTick(isFirstBeat: Boolean) {
-        val track = getAudioTrack(isFirstBeat)
-        track.stop()
-        track.play()
+    private fun playTick(isFirstBeat: Boolean, sound: MetronomeSound) {
+        runCatching {
+            val track = getAudioTrack(isFirstBeat, sound)
+            if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                track.stop()
+            }
+            track.reloadStaticData()
+            track.play()
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
         stopTicker()
-        // Release reusable AudioTrack instances
-        accentTrack?.run { stop(); release() }
-        regularTrack?.run { stop(); release() }
-        accentTrack = null
-        regularTrack = null
+        runCatching {
+            trackCache.values.forEach { track ->
+                if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+                track.release()
+            }
+        }
+        trackCache.clear()
+    }
+
+    companion object {
+        const val SAMPLE_RATE = 44100
+
+        internal fun generateClickPcm(
+            isAccent: Boolean,
+            sound: MetronomeSound = MetronomeSound.WOOD
+        ): ShortArray {
+            val durationMs = when (sound) {
+                MetronomeSound.WOOD -> if (isAccent) 50 else 38
+                MetronomeSound.MECHANICAL -> if (isAccent) 32 else 24
+                MetronomeSound.SOFT -> if (isAccent) 52 else 42
+            }
+            val numSamples = (durationMs * SAMPLE_RATE) / 1000
+            val out = ShortArray(numSamples)
+
+            val attackSec = when (sound) {
+                MetronomeSound.WOOD -> 0.0004
+                MetronomeSound.MECHANICAL -> 0.0003
+                MetronomeSound.SOFT -> 0.0012
+            }
+            val releaseSec = when (sound) {
+                MetronomeSound.WOOD -> 0.004
+                MetronomeSound.MECHANICAL -> 0.003
+                MetronomeSound.SOFT -> 0.004
+            }
+            val attackSamples = (attackSec * SAMPLE_RATE).toInt().coerceAtLeast(1)
+            val releaseSamples = (releaseSec * SAMPLE_RATE).toInt().coerceAtLeast(1)
+            val targetPeak = if (isAccent) 28000.0 else 21000.0
+
+            var rngState = if (isAccent) 0x5EED1001 else 0x5EED2002
+            fun nextSignedNoise(): Double {
+                var x = rngState
+                x = x xor (x shl 13)
+                x = x xor (x ushr 17)
+                x = x xor (x shl 5)
+                rngState = x
+                return ((x ushr 1).toDouble() / Int.MAX_VALUE.toDouble()) * 2.0 - 1.0
+            }
+
+            var lpNoise = 0.0
+            var phaseMain = 0.0
+            var phaseSecondary = 0.0
+            val dt = 1.0 / SAMPLE_RATE
+
+            for (i in 0 until numSamples) {
+                val t = i * dt
+
+                val attackEnv = if (i < attackSamples) {
+                    0.5 - 0.5 * cos(PI * i / attackSamples)
+                } else 1.0
+                val releaseEnv = if (i >= numSamples - releaseSamples) {
+                    val rem = (numSamples - 1 - i).coerceAtLeast(0)
+                    0.5 - 0.5 * cos(PI * rem / releaseSamples)
+                } else 1.0
+
+                val bodyRaw: Double
+                when (sound) {
+                    MetronomeSound.WOOD -> {
+                        val fStart = if (isAccent) 1520.0 else 1040.0
+                        val fEnd = if (isAccent) 1080.0 else 760.0
+                        val glide = exp(-t / 0.0035)
+                        val instFreq = fEnd + (fStart - fEnd) * glide
+                        phaseMain += 2.0 * PI * instFreq * dt
+                        phaseSecondary += 2.0 * PI * (fEnd * 2.42) * dt
+
+                        val decay = exp((if (isAccent) -78.0 else -92.0) * t)
+                        val inharmonic = sin(phaseSecondary) * 0.28 * exp(-210.0 * t)
+                        lpNoise = lpNoise * 0.65 + nextSignedNoise() * 0.35
+                        val mallet = if (t < 0.002) lpNoise * 0.30 * exp(-1200.0 * t) else 0.0
+                        bodyRaw = (sin(phaseMain) * 0.85 + inharmonic) * decay + mallet
+                    }
+                    MetronomeSound.MECHANICAL -> {
+                        val fStart = if (isAccent) 2400.0 else 1680.0
+                        val fEnd = if (isAccent) 1650.0 else 1180.0
+                        val glide = exp(-t / 0.0025)
+                        val instFreq = fEnd + (fStart - fEnd) * glide
+                        phaseMain += 2.0 * PI * instFreq * dt
+                        val caseFreq = if (isAccent) 820.0 else 620.0
+                        phaseSecondary += 2.0 * PI * caseFreq * dt
+
+                        val decay = exp((if (isAccent) -140.0 else -160.0) * t)
+                        lpNoise = lpNoise * 0.5 + nextSignedNoise() * 0.5
+                        val snap = if (t < 0.0015) lpNoise * 0.42 * exp(-1600.0 * t) else 0.0
+                        bodyRaw = (sin(phaseMain) * 0.72 + sin(phaseSecondary) * 0.40) * decay + snap
+                    }
+                    MetronomeSound.SOFT -> {
+                        val fBase = if (isAccent) 880.0 else 587.33
+                        phaseMain += 2.0 * PI * fBase * dt
+                        phaseSecondary += 2.0 * PI * (fBase * 2.0) * dt
+
+                        val decay = exp((if (isAccent) -62.0 else -74.0) * t)
+                        bodyRaw = (sin(phaseMain) * 0.86 + sin(phaseSecondary) * 0.16 * exp(-120.0 * t)) * decay
+                    }
+                }
+
+                val shaped = tanh(bodyRaw * 1.15) * attackEnv * releaseEnv
+                out[i] = (shaped * targetPeak).toInt()
+                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                    .toShort()
+            }
+            return out
+        }
     }
 }

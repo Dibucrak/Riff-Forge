@@ -1,39 +1,37 @@
 package com.riffforge.feature_tools.presentation
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Architecture
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.LinearScale
-import androidx.compose.material.icons.filled.MusicVideo
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
+
+data class ToolEntry(
+    val title: String,
+    val description: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)
 
 /**
- * Liquid Glass Tools Screen — glassmorphic hub with frosted glass cards,
- * accent-colored icon backgrounds, and gradient edge highlights.
+ * Tools Screen matching the ProfileScreen visual language:
+ * Inset ElevatedCards (24dp), theme-matched primary icons, section titles,
+ * and clean divided rows.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolsScreen(
     onNavigateToCircleOfFifths: () -> Unit,
@@ -44,176 +42,210 @@ fun ToolsScreen(
     onNavigateToDailyLearning: () -> Unit,
     onNavigateToProgressions: () -> Unit,
     onNavigateToScales: () -> Unit,
+    onNavigateToCommunity: () -> Unit = {},
     isDarkTheme: Boolean
 ) {
     val scrollState = rememberScrollState()
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        GlassSectionHeader(isDarkTheme = isDarkTheme, title = "Herramientas y Teoría")
-
-        ToolCardItem(
-            title = "Constructor de Escalas",
-            description = "Visualiza patrones y modos en el diapasón.",
-            icon = Icons.Default.LinearScale,
-            accentColor = AccentTint,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
-            onClick = onNavigateToScales
-        )
-        ToolCardItem(
+    val practiceTools = listOf(
+        ToolEntry(
+            title = "Metrónomo",
+            description = "Compás, tempo y tap tempo en tiempo real.",
+            icon = Icons.Default.Timer,
+            onClick = onNavigateToMetronome
+        ),
+        ToolEntry(
             title = "Diccionario de Acordes",
-            description = "Encuentra diagramas interactivos.",
-            icon = Icons.Default.LibraryBooks,
-            accentColor = AccentTint,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
+            description = "Diagramas interactivos, cejillas y digitación.",
+            icon = Icons.Default.MenuBook,
             onClick = onNavigateToChordDictionary
         )
-        ToolCardItem(
-            title = "Aprendizaje Diario",
-            description = "Descubre el acorde del día y retos.",
-            icon = Icons.Default.Lightbulb,
-            accentColor = SystemYellow,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
-            onClick = onNavigateToDailyLearning
-        )
-        ToolCardItem(
-            title = "Respaldo y Restauración",
-            description = "Respalda o restaura desde la nube.",
-            icon = Icons.Default.Cloud,
-            accentColor = SystemGreen,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
-            onClick = onNavigateToCloudBackup
-        )
-        ToolCardItem(
+    )
+
+    val theoryTools = listOf(
+        ToolEntry(
+            title = "Constructor de Escalas",
+            description = "Visualiza patrones y modos en el diapasón.",
+            icon = Icons.Default.MusicNote,
+            onClick = onNavigateToScales
+        ),
+        ToolEntry(
+            title = "Círculo de Quintas",
+            description = "Explora armaduras, tónicas y tonos relativos.",
+            icon = Icons.Default.School,
+            onClick = onNavigateToCircleOfFifths
+        ),
+        ToolEntry(
             title = "Generador de Progresiones",
-            description = "Encuentra inspiración armónica.",
-            icon = Icons.Default.MusicVideo,
-            accentColor = SystemRed,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
+            description = "Secuencias armónicas inspiradoras por género.",
+            icon = Icons.Default.AutoAwesome,
             onClick = onNavigateToProgressions
         )
-        ToolCardItem(
-            title = "Entrenador de Oído",
-            description = "Afina tu percepción de intervalos.",
+    )
+
+    val trainingTools = listOf(
+        ToolEntry(
+            title = "Aprendizaje Diario",
+            description = "Descubre el acorde del día y retos armónicos.",
+            icon = Icons.Default.Lightbulb,
+            onClick = onNavigateToDailyLearning
+        ),
+        ToolEntry(
+            title = "Entrenamiento de Oído",
+            description = "Reconocimiento auditivo de intervalos y notas.",
             icon = Icons.Default.Headphones,
-            accentColor = AccentTint,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
             onClick = onNavigateToEarTraining
+        ),
+        ToolEntry(
+            title = "Comunidad Riff Forge",
+            description = "Explora y descarga canciones compartidas por otros músicos.",
+            icon = Icons.Default.Public,
+            onClick = onNavigateToCommunity
+        ),
+        ToolEntry(
+            title = "Sincronización en la Nube",
+            description = "Respalda y restaura tus canciones y setlists.",
+            icon = Icons.Default.CloudUpload,
+            onClick = onNavigateToCloudBackup
         )
-        ToolCardItem(
-            title = "Círculo de Quintas",
-            description = "Explora tonalidades relativas.",
-            icon = Icons.Default.Architecture,
-            accentColor = AccentTint,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
-            onClick = onNavigateToCircleOfFifths
-        )
-        ToolCardItem(
-            title = "Metrónomo",
-            description = "Mantén el tempo perfecto.",
-            icon = Icons.Default.Timer,
-            accentColor = SystemYellow,
-            isDarkTheme = isDarkTheme,
-            textColor = textColor,
-            dimTextColor = dimTextColor,
-            onClick = onNavigateToMetronome
-        )
-        Spacer(modifier = Modifier.height(32.dp))
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Herramientas & Teoría", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ── Grupo 1: Práctica & Afinación ──────────────────────────
+            ToolsGroupCard(
+                groupTitle = "Práctica & Afinación",
+                entries = practiceTools
+            )
+
+            // ── Grupo 2: Teoría & Armonía ──────────────────────────────
+            ToolsGroupCard(
+                groupTitle = "Teoría & Composición",
+                entries = theoryTools
+            )
+
+            // ── Grupo 3: Entrenamiento & Rutinas ───────────────────────
+            ToolsGroupCard(
+                groupTitle = "Entrenamiento & Respaldo",
+                entries = trainingTools
+            )
+
+            Spacer(modifier = Modifier.navigationBarsPadding().height(110.dp))
+        }
     }
 }
 
 @Composable
-fun ToolCardItem(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    accentColor: Color,
-    isDarkTheme: Boolean,
-    textColor: Color,
-    dimTextColor: Color,
-    onClick: () -> Unit
+private fun ToolsGroupCard(
+    groupTitle: String,
+    entries: List<ToolEntry>
 ) {
-    val edgeColors = if (isDarkTheme) {
-        listOf(GlassEdgeDarkStart, GlassEdgeDarkMid, GlassEdgeDarkEnd)
-    } else {
-        listOf(GlassEdgeHighlightStart, GlassEdgeHighlightMid, GlassEdgeHighlightEnd)
-    }
-    val backgroundColor = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = GlassShadow, ambientColor = GlassShadow)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(16.dp),
-        color = backgroundColor,
-        border = BorderStroke(
-            0.5.dp,
-            Brush.linearGradient(
-                colors = edgeColors,
-                start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                end = androidx.compose.ui.geometry.Offset(500f, 500f)
-            )
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(20.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = accentColor
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textColor
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = dimTextColor
-                )
+            Text(
+                text = groupTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            entries.forEachIndexed { index, entry ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { entry.onClick() }
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = entry.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column {
+                            Text(
+                                text = entry.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = entry.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+
+                if (index < entries.lastIndex) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(start = 56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
             }
         }
     }

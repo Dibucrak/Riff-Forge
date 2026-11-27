@@ -1,210 +1,379 @@
 package com.riffforge.feature_theory.presentation.circle_of_fifths
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.riffforge.core.presentation.components.*
-import com.riffforge.core.presentation.theme.*
-import com.riffforge.feature_theory.domain.model.KeySignature
+import androidx.compose.ui.unit.sp
+import com.riffforge.core.domain.util.AppSettings
+import com.riffforge.feature_songs.domain.util.ChordTransposer
 import com.riffforge.feature_theory.domain.util.MusicTheoryData
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * Liquid Glass Circle of Fifths — glassmorphic info card with cyan/purple nodes
- * and chord chips with purple glass backgrounds.
- */
+private val DIATONIC_ROMAN_NUMERALS = listOf("I", "ii", "iii", "IV", "V", "vi", "vii°")
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CircleOfFifthsScreen(
     onNavigateUp: () -> Unit,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean = false
 ) {
     val keys = MusicTheoryData.circleOfFifths
     var selectedKey by remember { mutableStateOf(keys[0]) }
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
-    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
+    val useSpanish = AppSettings.useSpanishNotation
 
-    GlassBackground(isDarkTheme = isDarkTheme) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Top bar
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                isDarkTheme = isDarkTheme,
-                cornerRadius = 16.dp
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Círculo de Quintas", fontWeight = FontWeight.ExtraBold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val selectedMajorRaw = selectedKey.majorName.substringBefore(" /").trim()
+            val selectedMinorRaw = selectedKey.minorName.substringBefore(" /").trim()
+            val selectedMajorDisplay = ChordTransposer.getNoteDisplayName(selectedMajorRaw, useSpanish)
+            val selectedMinorDisplay = ChordTransposer.getNoteDisplayName(selectedMinorRaw, useSpanish)
+            val selectedMajorFull = ChordTransposer.getNoteDisplayName(selectedKey.majorName, useSpanish)
+            val selectedMinorFull = ChordTransposer.getNoteDisplayName(selectedKey.minorName, useSpanish)
+
+            // ── Interactive Dual-Ring Wheel Card ─────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    IconButton(
-                        onClick = onNavigateUp,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = glassSurface.copy(alpha = 0.3f)
-                        )
+                    Box(
+                        modifier = Modifier.size(306.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar", tint = textColor)
-                    }
-                    Text(
-                        text = "Círculo de Quintas",
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // Content area
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 80.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Circle visualization
-                Box(
-                    modifier = Modifier
-                        .size(320.dp)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val radiusOuter = 130.dp
-                    val radiusInner = 80.dp
-
-                    keys.forEachIndexed { index, keySignature ->
-                        val angleStr = Math.toRadians((index * 30.0) - 90.0)
-                        val outerX = (cos(angleStr) * radiusOuter.value).dp
-                        val outerY = (sin(angleStr) * radiusOuter.value).dp
-                        val innerX = (cos(angleStr) * radiusInner.value).dp
-                        val innerY = (sin(angleStr) * radiusInner.value).dp
-                        val isSelected = selectedKey.id == keySignature.id
-
+                        // Outer concentric ring background
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .align(Alignment.Center)
-                                .offset(x = outerX, y = outerY)
+                                .size(292.dp)
                                 .clip(CircleShape)
-                                .background(if (isSelected) AccentTint else (if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim))
-                                .clickable { selectedKey = keySignature },
-                            contentAlignment = Alignment.Center
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                    shape = CircleShape
+                                )
+                        )
+
+                        // Inner concentric ring background
+                        Box(
+                            modifier = Modifier
+                                .size(196.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                    shape = CircleShape
+                                )
+                        )
+
+                        // Solid Forge Orange Center Hub
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .size(98.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
                         ) {
                             Text(
-                                text = keySignature.majorName,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                                color = if (isSelected) OnAccent else textColor,
-                                fontWeight = FontWeight.Bold
+                                text = selectedMajorDisplay,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = selectedMinorDisplay,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                                maxLines = 1
                             )
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .align(Alignment.Center)
-                                .offset(x = innerX, y = innerY)
-                                .clip(CircleShape)
-                                .background(if (isSelected) AccentTint else Color.Transparent)
-                                .clickable { selectedKey = keySignature },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = keySignature.minorName,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (isSelected) OnAccent else dimTextColor
+                        val radiusOuter = 121f
+                        val radiusInner = 74f
+
+                        keys.forEachIndexed { index, keySignature ->
+                            val angleRad = ((index * 30.0) - 90.0) * PI / 180.0
+                            val outerX = (cos(angleRad) * radiusOuter).dp
+                            val outerY = (sin(angleRad) * radiusOuter).dp
+                            val innerX = (cos(angleRad) * radiusInner).dp
+                            val innerY = (sin(angleRad) * radiusInner).dp
+                            val isSelected = selectedKey.id == keySignature.id
+
+                            val shortMajor = ChordTransposer.getNoteDisplayName(
+                                keySignature.majorName.substringBefore(" /").trim(),
+                                useSpanish
                             )
+                            val shortMinor = ChordTransposer.getNoteDisplayName(
+                                keySignature.minorName.substringBefore(" /").trim(),
+                                useSpanish
+                            )
+
+                            // Outer Major Node
+                            Box(
+                                modifier = Modifier
+                                    .offset(x = outerX, y = outerY)
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary
+                                        else Color.Transparent
+                                    )
+                                    .clickable { selectedKey = keySignature },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = shortMajor,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = if (shortMajor.length > 2) 11.sp else 13.sp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            // Inner Minor Node
+                            Box(
+                                modifier = Modifier
+                                    .offset(x = innerX, y = innerY)
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .clickable { selectedKey = keySignature },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = shortMinor,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    fontSize = if (shortMinor.length > 3) 9.sp else 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Info card
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    isDarkTheme = isDarkTheme,
-                    cornerRadius = 20.dp
-                ) {
+                    // Bottom Key Summary Row inside Wheel Card
+                    val accidentalsText = if (selectedKey.accidentals == "0") {
+                        "0 alteraciones"
+                    } else {
+                        "${selectedKey.accidentals} alt."
+                    }
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Tonalidad: ${selectedKey.majorName} / ${selectedKey.minorName}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
-                        Text(
-                            text = "Alt: ${selectedKey.accidentals}",
+                            text = "$selectedMajorFull Mayor / $selectedMinorFull",
                             style = MaterialTheme.typography.titleMedium,
-                            color = AccentTint
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = accidentalsText,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // ── Acordes Diatónicos Card (With Roman Numerals) ────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
                     Text(
-                        text = "Acordes en la escala:",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = dimTextColor
+                        text = "Acordes Diatónicos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    val chunkedChords = selectedKey.chordsInKey.chunked(4)
-                    chunkedChords.forEach { rowChords ->
+                    val chords = selectedKey.chordsInKey
+                    val row1 = chords.take(4)
+                    val row2 = chords.drop(4)
+
+                    // Row 1 (I, ii, iii, IV)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row1.forEachIndexed { idx, chord ->
+                            val roman = DIATONIC_ROMAN_NUMERALS.getOrElse(idx) { "" }
+                            val displayChord = ChordTransposer.getNoteDisplayName(chord, useSpanish)
+                            val isTonic = idx == 0
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isTonic) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = displayChord,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    color = if (isTonic) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = roman,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isTonic) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (row2.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Row 2 (V, vi, vii°)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            rowChords.forEach { chord ->
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .background(
-                                            AccentTint.copy(alpha = 0.2f),
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                        .padding(vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
+                            row2.forEachIndexed { idx, chord ->
+                                val degreeIdx = idx + 4
+                                val roman = DIATONIC_ROMAN_NUMERALS.getOrElse(degreeIdx) { "" }
+                                val displayChord = ChordTransposer.getNoteDisplayName(chord, useSpanish)
+                                val isDim = degreeIdx == 6
+
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isDim) MaterialTheme.colorScheme.surface
+                                    else MaterialTheme.colorScheme.primaryContainer,
+                                    border = if (isDim) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)) else null
                                 ) {
-                                    Text(
-                                        text = chord,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center,
-                                        color = textColor,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = displayChord,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = roman,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
+                            if (row2.size < 4) {
+                                Spacer(modifier = Modifier.weight((4 - row2.size).toFloat()))
+                            }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

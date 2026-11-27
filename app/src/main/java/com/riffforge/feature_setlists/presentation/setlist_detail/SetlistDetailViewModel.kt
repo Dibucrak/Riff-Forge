@@ -55,7 +55,29 @@ class SetlistDetailViewModel @Inject constructor(
                 }
             }
             is SetlistDetailEvent.RemoveSongFromSetlist -> {
-                // TODO: Implementar en el caso de uso futuro si se desea remover canciones
+                viewModelScope.launch {
+                    if (currentSetId != -1) {
+                        setlistUseCases.removeSongFromSetlist(currentSetId, event.songId)
+                    }
+                }
+            }
+            is SetlistDetailEvent.UpdateSetlist -> {
+                viewModelScope.launch {
+                    if (currentSetId != -1) {
+                        runCatching {
+                            setlistUseCases.updateSetlist(currentSetId, event.name, event.description)
+                        }
+                    }
+                }
+            }
+            is SetlistDetailEvent.DeleteSetlist -> {
+                viewModelScope.launch {
+                    if (currentSetId != -1) {
+                        runCatching {
+                            setlistUseCases.deleteSetlist(currentSetId)
+                        }
+                    }
+                }
             }
         }
     }

@@ -56,11 +56,25 @@ class SetlistRepositoryImpl(
         return dao.insertSetlist(setlist.toEntity())
     }
 
+    override suspend fun updateSetlist(setId: Int, name: String, description: String) {
+        dao.updateSetlist(setId, name.trim(), description.trim())
+    }
+
+    override suspend fun deleteSetlist(setId: Int) {
+        dao.deleteAllSongsFromSetlist(setId)
+        dao.deleteSetlistById(setId)
+    }
+
     override suspend fun addSongToSetlist(setId: Int, songId: Int) {
         dao.insertSetlistSongCrossRef(SetlistSongCrossRef(setId, songId))
     }
 
     override suspend fun removeSongFromSetlist(setId: Int, songId: Int) {
         dao.removeSongFromSetlist(setId, songId)
+    }
+
+    override suspend fun clearAllSetlists() {
+        dao.deleteAllCrossRefs()
+        dao.deleteAllSetlists()
     }
 }

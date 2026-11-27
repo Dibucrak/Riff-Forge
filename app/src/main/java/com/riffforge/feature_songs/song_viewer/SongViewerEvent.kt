@@ -13,4 +13,5 @@ sealed class SongViewerEvent {
     object CapoDown : SongViewerEvent()
     object ToggleFlats : SongViewerEvent()
     object ToggleSpanishNotation : SongViewerEvent()
+    object DeleteSong : SongViewerEvent()
 }

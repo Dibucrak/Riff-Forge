@@ -5,5 +5,6 @@ data class TunerState(
     val currentNote: String = "-",
     val currentFrequency: Float = 0f,
     val centsOffset: Float = 0f,
-    val hasPermission: Boolean = false
+    val hasPermission: Boolean = false,
+    val targetFrequency: Float? = null
 )

@@ -44,6 +44,10 @@ class AddEditSongViewModel @Inject constructor(
     val songContent: State<String> = _songContent
 
     private var currentSongId: Int? = null
+    private val _isEditMode = mutableStateOf(false)
+    val isEditMode: State<Boolean> = _isEditMode
+    private val _isPublishing = mutableStateOf(false)
+    val isPublishing: State<Boolean> = _isPublishing
 
     private val _eventFlow = MutableSharedFlow<UiEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
@@ -59,6 +63,7 @@ class AddEditSongViewModel @Inject constructor(
                 viewModelScope.launch {
                     songUseCases.getSongById(songId)?.also { song ->
                         currentSongId = song.id
+                        _isEditMode.value = true
                         _songTitle.value = song.title
                         _songArtist.value = song.artist
                         _songKey.value = song.key
@@ -102,31 +107,35 @@ class AddEditSongViewModel @Inject constructor(
                 }
             }
             is AddEditSongEvent.PublishToCommunity -> {
+                if (_isPublishing.value) return
                 viewModelScope.launch {
-                    if (_songTitle.value.isBlank() || _songContent.value.isBlank()) {
-                        _eventFlow.emit(UiEvent.ShowSnackbar("El título y el contenido son obligatorios para publicar."))
+                    if (_songTitle.value.isBlank() || _songArtist.value.isBlank() || _songContent.value.isBlank()) {
+                        _eventFlow.emit(UiEvent.ShowSnackbar("Título, artista y contenido son obligatorios para publicar."))
                         return@launch
                     }
 
+                    _isPublishing.value = true
                     try {
                         val user = authUseCases.getCurrentUser().first()
                         if (user != null) {
-                            val bpmInt = _songBpm.value.toIntOrNull() ?: 120
+                            val bpmInt = _songBpm.value.toIntOrNull()?.coerceIn(30, 300) ?: 120
                             val contribution = Contribution(
-                                title = _songTitle.value,
-                                artist = _songArtist.value,
+                                title = _songTitle.value.trim(),
+                                artist = _songArtist.value.trim(),
                                 key = _songKey.value,
                                 tuning = _songTuning.value,
                                 bpm = bpmInt,
                                 content = _songContent.value,
                                 authorId = user.uid,
-                                authorName = user.displayName ?: "Guitarrista Anónimo",
-                                isApproved = true
+                                authorName = user.username?.takeIf { it.isNotBlank() }
+                                    ?: user.displayName?.takeIf { it.isNotBlank() }
+                                    ?: "Guitarrista Anónimo",
+                                isApproved = false
                             )
 
                             val result = communityRepository.publishContribution(contribution)
                             if (result.isSuccess) {
-                                _eventFlow.emit(UiEvent.ShowSnackbar("¡Aporte enviado a la comunidad!"))
+                                _eventFlow.emit(UiEvent.ShowSnackbar("¡Aporte enviado para moderación!"))
                             } else {
                                 _eventFlow.emit(UiEvent.ShowSnackbar("Error al enviar aporte."))
                             }
@@ -135,6 +144,8 @@ class AddEditSongViewModel @Inject constructor(
                         }
                     } catch (e: Exception) {
                         _eventFlow.emit(UiEvent.ShowSnackbar(e.message ?: "Error de conexión."))
+                    } finally {
+                        _isPublishing.value = false
                     }
                 }
             }

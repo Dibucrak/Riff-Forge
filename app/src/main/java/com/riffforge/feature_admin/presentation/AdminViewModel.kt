@@ -4,6 +4,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.riffforge.feature_admin.domain.repository.UserRepository
 import com.riffforge.feature_contributions.domain.repository.CommunityRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,16 +19,20 @@ import javax.inject.Inject
 @HiltViewModel
 class AdminViewModel @Inject constructor(
     private val communityRepository: CommunityRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    firebaseAuth: FirebaseAuth
 ) : ViewModel() {
 
-    private val _state = mutableStateOf(AdminState())
+    private val _state = mutableStateOf(
+        AdminState(currentUserUid = firebaseAuth.currentUser?.uid ?: "")
+    )
     val state: State<AdminState> = _state
 
     private val _eventFlow = MutableSharedFlow<UiEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
     private var getPendingJob: Job? = null
+    private var getAllContributionsJob: Job? = null
     private var getUsersJob: Job? = null
     var deleteTargetUid: String? = null
 
@@ -37,6 +42,7 @@ class AdminViewModel @Inject constructor(
 
     init {
         getPendingContributions()
+        getAllContributions()
         getAllUsers()
     }
 
@@ -106,6 +112,15 @@ class AdminViewModel @Inject constructor(
                     pendingContributions = pendingList,
                     isLoading = false
                 )
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun getAllContributions() {
+        getAllContributionsJob?.cancel()
+        getAllContributionsJob = communityRepository.getAllContributions()
+            .onEach { allList ->
+                _state.value = state.value.copy(allContributions = allList)
             }
             .launchIn(viewModelScope)
     }

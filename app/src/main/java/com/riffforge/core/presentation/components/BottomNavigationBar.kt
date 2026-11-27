@@ -53,55 +53,58 @@ fun BottomNavigationBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val backgroundColor = if (isDarkTheme) GlassSurfaceThinDark else GlassSurfaceThinLight
-    val selectedFill = if (isDarkTheme) GlassSurfaceDarkDim else GlassSurfaceLightDim
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
-    val shape = RoundedCornerShape(32.dp)
+    val shape = RoundedCornerShape(28.dp)
 
-    // Floating Liquid Glass tab bar (capsule inset from the screen edges)
+    val bg = MaterialTheme.colorScheme.background
+    // True floating Tab Bar with soft bottom fade (zero hard black rectangle, no text clash under system nav buttons)
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.Transparent,
+                        0.38f to bg.copy(alpha = 0.75f),
+                        0.72f to bg
+                    )
+                )
+            )
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Surface(
-            modifier = Modifier
-                .shadow(
-                    elevation = 12.dp,
-                    shape = shape,
-                    spotColor = GlassShadowElevated,
-                    ambientColor = GlassShadowElevated
-                ),
+            modifier = Modifier.fillMaxWidth(),
             shape = shape,
-            color = backgroundColor,
-            border = BorderStroke(width = 0.5.dp, brush = glassRimBrush(isDarkTheme))
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route
-                    val itemColor = if (isSelected) AccentTint else dimTextColor
+                    val itemColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    val selectedFill = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
 
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(26.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(
-                                color = if (isSelected) selectedFill else Color.Transparent,
-                                shape = RoundedCornerShape(26.dp)
+                                color = selectedFill,
+                                shape = RoundedCornerShape(20.dp)
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = {
                                     navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
+                                        popUpTo(Screen.Tuner.route) {
                                             saveState = true
                                         }
                                         launchSingleTop = true
@@ -122,7 +125,7 @@ fun BottomNavigationBar(
                         Text(
                             text = item.title,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = itemColor
                         )
                     }

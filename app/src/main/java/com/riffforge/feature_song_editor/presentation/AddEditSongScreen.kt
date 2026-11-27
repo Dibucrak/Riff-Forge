@@ -1,53 +1,48 @@
 package com.riffforge.feature_song_editor.presentation
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.LibraryBooks
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.collectLatest
+
+private val SONG_KEYS = listOf(
+    "C", "Cm", "C#", "D", "Dm", "Eb", "E", "Em", "F", "Fm", "F#", "F#m",
+    "G", "Gm", "Ab", "A", "Am", "Bb", "B", "Bm"
+)
+
+private val SONG_TUNINGS = listOf(
+    "E Standard",
+    "Drop D",
+    "Half Step Down (Eb)",
+    "Full Step Down (D)",
+    "Drop C",
+    "Open G",
+    "DADGAD"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +56,12 @@ fun AddEditSongScreen(
     val tuningState = viewModel.songTuning.value
     val bpmState = viewModel.songBpm.value
     val contentState = viewModel.songContent.value
+    val isEditMode = viewModel.isEditMode.value
+    val isPublishing = viewModel.isPublishing.value
+    val useSpanish = com.riffforge.core.domain.util.AppSettings.useSpanishNotation
+
+    var keyMenuExpanded by remember { mutableStateOf(false) }
+    var tuningMenuExpanded by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
@@ -80,171 +81,405 @@ fun AddEditSongScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Añadir/Editar Canción", fontWeight = FontWeight.Bold) },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = if (isEditMode) "Editar Canción" else "Nueva Canción",
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    TextButton(onClick = onNavigateUp) {
+                        Text(
+                            text = "Cancelar",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                actions = {
+                    TextButton(onClick = { viewModel.onEvent(AddEditSongEvent.SaveSong) }) {
+                        Text(
+                            text = "Guardar",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.onEvent(AddEditSongEvent.SaveSong) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Save, contentDescription = "Guardar canción")
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp)
                 .verticalScroll(scrollState)
         ) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Información Principal",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-            )
-            Card(
+            // ── Card 1: Título & Artista (Connected Inset Card) ──────────
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = titleState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredTitle(it)) },
-                        label = { Text("Título de la canción") },
-                        leadingIcon = { Icon(Icons.Default.Audiotrack, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = artistState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredArtist(it)) },
-                        label = { Text("Artista o Banda") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Detalles Técnicos",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = keyState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredKey(it)) },
-                        label = { Text("Tonalidad (Ej: Am, C)") },
-                        leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tuningState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredTuning(it)) },
-                        label = { Text("Afinación (Ej: E Standard)") },
-                        leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = bpmState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredBpm(it)) },
-                        label = { Text("BPM (Tempo)") },
-                        leadingIcon = { Icon(Icons.Default.Speed, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Letra y Tablatura",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = contentState,
-                        onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredContent(it)) },
-                        label = { Text("Pega tu tablatura aquí...") },
-                        leadingIcon = { Icon(Icons.Default.LibraryBooks, contentDescription = null) },
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(250.dp),
-                        singleLine = false,
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            fontFamily = FontFamily.Monospace
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Default
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = "Título",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        BasicTextField(
+                            value = titleState,
+                            onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredTitle(it)) },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (titleState.isEmpty()) {
+                                    Text(
+                                        text = "Ej: Flaca",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 17.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
                     )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = "Artista",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        BasicTextField(
+                            value = artistState,
+                            onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredArtist(it)) },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (artistState.isEmpty()) {
+                                    Text(
+                                        text = "Ej: Andrés Calamaro",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 17.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Card 2: Tono, Afinación y Tempo (Dropdown Rows) ──────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Tono row
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { keyMenuExpanded = true }
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tono",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = com.riffforge.feature_songs.domain.util.ChordTransposer.getNoteDisplayName(keyState.ifBlank { "C" }, useSpanish),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Elegir tono",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = keyMenuExpanded,
+                            onDismissRequest = { keyMenuExpanded = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            SONG_KEYS.forEach { k ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = com.riffforge.feature_songs.domain.util.ChordTransposer.getNoteDisplayName(k, useSpanish),
+                                            fontWeight = if (k == keyState) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (k == keyState) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.onEvent(AddEditSongEvent.EnteredKey(k))
+                                        keyMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
+                    )
+
+                    // Afinación row
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { tuningMenuExpanded = true }
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Afinación",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = tuningState.ifBlank { "E Standard" },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Elegir afinación",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = tuningMenuExpanded,
+                            onDismissRequest = { tuningMenuExpanded = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            SONG_TUNINGS.forEach { t ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = t,
+                                            fontWeight = if (t == tuningState) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (t == tuningState) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.onEvent(AddEditSongEvent.EnteredTuning(t))
+                                        tuningMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
+                    )
+
+                    // Tempo (BPM) row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tempo (BPM)",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        BasicTextField(
+                            value = bpmState,
+                            onValueChange = { newVal ->
+                                if (newVal.all { it.isDigit() } && newVal.length <= 3) {
+                                    viewModel.onEvent(AddEditSongEvent.EnteredBpm(newVal))
+                                }
+                            },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.End
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier.width(80.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Section Header: Letra y Acordes | Monoespacio ────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Letra y Acordes",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Monoespacio",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // ── Monospace Lyrics & Chords Card ───────────────────────────
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 260.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                BasicTextField(
+                    value = contentState,
+                    onValueChange = { viewModel.onEvent(AddEditSongEvent.EnteredContent(it)) },
+                    textStyle = TextStyle(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    decorationBox = { inner ->
+                        if (contentState.isEmpty()) {
+                            Text(
+                                text = "[Estribillo]\nG        B7\nFlaca, no me claves\nEm       C\ntus puñales por la espalda...",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 15.sp,
+                                lineHeight = 22.sp
+                            )
+                        }
+                        inner()
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Bottom Action Buttons ────────────────────────────────────
+            Button(
+                onClick = { viewModel.onEvent(AddEditSongEvent.SaveSong) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Guardar en Mi Repertorio", fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedButton(
                 onClick = { viewModel.onEvent(AddEditSongEvent.PublishToCommunity) },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.tertiary
-                )
+                enabled = !isPublishing,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
             ) {
-                Icon(imageVector = Icons.Default.Public, contentDescription = "Compartir")
+                if (isPublishing) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(imageVector = Icons.Default.Public, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Publicar en la Comunidad", fontWeight = FontWeight.Bold)
+                Text(if (isPublishing) "Enviando..." else "Publicar en la Comunidad", fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

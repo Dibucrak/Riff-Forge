@@ -24,9 +24,31 @@ class AddSongToSetlistUseCase(private val repository: SetlistRepository) {
     }
 }
 
+class RemoveSongFromSetlistUseCase(private val repository: SetlistRepository) {
+    suspend operator fun invoke(setId: Int, songId: Int) {
+        repository.removeSongFromSetlist(setId, songId)
+    }
+}
+
+class UpdateSetlistUseCase(private val repository: SetlistRepository) {
+    suspend operator fun invoke(setId: Int, name: String, description: String) {
+        if (name.isBlank()) throw IllegalArgumentException("El nombre del Setlist no puede estar vacío.")
+        repository.updateSetlist(setId, name, description)
+    }
+}
+
+class DeleteSetlistUseCase(private val repository: SetlistRepository) {
+    suspend operator fun invoke(setId: Int) {
+        repository.deleteSetlist(setId)
+    }
+}
+
 data class SetlistUseCases(
     val getSetlists: GetSetlistsUseCase,
     val getSetlistById: GetSetlistByIdUseCase,
     val addSetlist: AddSetlistUseCase,
-    val addSongToSetlist: AddSongToSetlistUseCase
+    val updateSetlist: UpdateSetlistUseCase,
+    val deleteSetlist: DeleteSetlistUseCase,
+    val addSongToSetlist: AddSongToSetlistUseCase,
+    val removeSongFromSetlist: RemoveSongFromSetlistUseCase
 )

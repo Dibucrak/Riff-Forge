@@ -4,8 +4,10 @@ import com.riffforge.feature_songs.data.local.dao.SongDao
 import com.riffforge.feature_songs.data.repository.SongRepositoryImpl
 import com.riffforge.feature_songs.domain.repository.SongRepository
 import com.riffforge.feature_songs.domain.use_case.AddSongUseCase
+import com.riffforge.feature_songs.domain.use_case.DeleteSongUseCase
 import com.riffforge.feature_songs.domain.use_case.GetSongByIdUseCase
 import com.riffforge.feature_songs.domain.use_case.GetSongsUseCase
+import com.riffforge.feature_songs.domain.use_case.ObserveSongByIdUseCase
 import com.riffforge.feature_songs.domain.use_case.SongUseCases
 import dagger.Module
 import dagger.Provides
@@ -29,7 +31,9 @@ object SongModule {
         return SongUseCases(
             getSongs = GetSongsUseCase(repository),
             getSongById = GetSongByIdUseCase(repository),
-            addSong = AddSongUseCase(repository)
+            observeSongById = ObserveSongByIdUseCase(repository),
+            addSong = AddSongUseCase(repository),
+            deleteSong = DeleteSongUseCase(repository)
         )
     }
 }

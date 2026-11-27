@@ -1,5 +1,6 @@
 package com.riffforge.feature_songs.presentation.song_viewer
 
+import com.riffforge.core.domain.util.AppSettings
 import com.riffforge.feature_songs.domain.model.Song
 
 data class SongViewerState(
@@ -9,9 +10,9 @@ data class SongViewerState(
     val transposeSemitones: Int = 0,
     val capo: Int = 0,
     val preferFlats: Boolean = false,
-    val useSpanishNotation: Boolean = false,
+    val useSpanishNotation: Boolean = AppSettings.useSpanishNotation,
     val isAutoScrolling: Boolean = false,
-    val scrollSpeed: Int = 2,
+    val scrollSpeed: Float = 1.0f,
     val textSizeSp: Float = 16f,
     val isLoading: Boolean = true,
 

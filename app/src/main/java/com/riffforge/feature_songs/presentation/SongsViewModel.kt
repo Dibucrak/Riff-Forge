@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,6 +32,9 @@ class SongsViewModel @Inject constructor(
                 getSongs()
             }
             is SongsEvent.DeleteSong -> {
+                viewModelScope.launch {
+                    songUseCases.deleteSong(event.song.id)
+                }
             }
         }
     }

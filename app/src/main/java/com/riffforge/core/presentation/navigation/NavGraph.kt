@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.riffforge.feature_admin.presentation.AdminScreen
+import com.riffforge.feature_auth.presentation.forgot_password.ForgotPasswordScreen
 import com.riffforge.feature_auth.presentation.login.LoginScreen
 import com.riffforge.feature_auth.presentation.register.RegisterScreen
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
@@ -76,12 +77,26 @@ fun NavGraph(
                 },
                 onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword.route)
                 }
             )
         }
 
         composable(route = Screen.Register.route) {
-            RegisterScreen(onNavigateUp = { navController.navigateUp() })
+            RegisterScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Tuner.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(route = Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(onNavigateUp = { navController.navigateUp() })
         }
 
         composable(
@@ -113,7 +128,14 @@ fun NavGraph(
                 onNavigateToDailyLearning = { navController.navigate(Screen.DailyLearning.route) },
                 onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) },
                 onNavigateToScales = { navController.navigate(Screen.Scales.route) },
+                onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
                 isDarkTheme = isDarkTheme
+            )
+        }
+
+        composable(route = Screen.CommunityExplorer.route) {
+            com.riffforge.feature_contributions.presentation.community_explorer.CommunityScreen(
+                onNavigateUp = { navController.navigateUp() }
             )
         }
 

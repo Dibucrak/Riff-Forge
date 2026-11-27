@@ -5,4 +5,6 @@ sealed class SetlistDetailEvent {
     object HideAddSongDialog : SetlistDetailEvent()
     data class AddSongToSetlist(val songId: Int) : SetlistDetailEvent()
     data class RemoveSongFromSetlist(val songId: Int) : SetlistDetailEvent()
+    data class UpdateSetlist(val name: String, val description: String) : SetlistDetailEvent()
+    object DeleteSetlist : SetlistDetailEvent()
 }

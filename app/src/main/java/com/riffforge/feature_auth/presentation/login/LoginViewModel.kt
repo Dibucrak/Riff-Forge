@@ -66,6 +66,26 @@ class LoginViewModel @Inject constructor(
                     }
                 }
             }
+            is LoginEvent.SignInWithGoogle -> {
+                viewModelScope.launch {
+                    _state.value = state.value.copy(isLoading = true, error = null)
+                    val result = authUseCases.signInWithGoogle(event.activity)
+                    result.onSuccess {
+                        _state.value = state.value.copy(isLoading = false)
+                        _eventFlow.emit(UiEvent.LoginSuccess)
+                    }.onFailure { exception ->
+                        _state.value = state.value.copy(
+                            isLoading = false,
+                            error = exception.message ?: "Error al iniciar sesión con Google"
+                        )
+                        _eventFlow.emit(
+                            UiEvent.ShowSnackbar(
+                                message = exception.message ?: "No se pudo iniciar sesión con Google"
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }

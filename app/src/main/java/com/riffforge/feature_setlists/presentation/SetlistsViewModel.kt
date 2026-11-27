@@ -60,7 +60,13 @@ class SetlistsViewModel @Inject constructor(
                             newSetlistDescription = ""
                         )
                     } catch (e: Exception) {
+                        e.printStackTrace()
                     }
+                }
+            }
+            is SetlistsEvent.DeleteSetlist -> {
+                viewModelScope.launch {
+                    runCatching { setlistUseCases.deleteSetlist(event.setId) }
                 }
             }
         }

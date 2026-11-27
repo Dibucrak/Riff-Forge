@@ -29,13 +29,17 @@ class UserRepositoryImpl @Inject constructor(
                 val displayName = doc.getString("displayName")
                 val isAdmin = doc.getBoolean("isAdmin") ?: false
                 val joinDate = doc.getLong("joinDate") ?: System.currentTimeMillis()
+                val photoUrl = doc.getString("photoUrl").orEmpty()
+                val photoData = doc.getString("photoData").orEmpty()
 
                 AdminUser(
                     uid = uid,
                     email = email,
                     displayName = displayName,
                     isAdmin = isAdmin,
-                    joinDate = joinDate
+                    joinDate = joinDate,
+                    photoUrl = photoUrl,
+                    photoData = photoData
                 )
             } ?: emptyList()
 
@@ -58,6 +62,7 @@ class UserRepositoryImpl @Inject constructor(
         return try {
             // Eliminar el documento de usuario en Firestore
             usersCollection.document(uid).delete().await()
+            runCatching { firestore.collection("public_profiles").document(uid).delete().await() }
             // Eliminar la subcolección de backups
             val backups = usersCollection.document(uid).collection("backups").get().await()
             for (doc in backups.documents) {

@@ -6,4 +6,5 @@ sealed class SetlistsEvent {
     data class EnteredName(val name: String) : SetlistsEvent()
     data class EnteredDescription(val description: String) : SetlistsEvent()
     object SaveSetlist : SetlistsEvent()
+    data class DeleteSetlist(val setId: Int) : SetlistsEvent()
 }

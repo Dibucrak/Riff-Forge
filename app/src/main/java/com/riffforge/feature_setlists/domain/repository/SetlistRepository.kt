@@ -8,6 +8,9 @@ interface SetlistRepository {
     fun getSetlists(): Flow<List<SetlistDetail>>
     fun getSetlistById(id: Int): Flow<SetlistDetail?>
     suspend fun insertSetlist(setlist: Setlist): Long
+    suspend fun updateSetlist(setId: Int, name: String, description: String)
+    suspend fun deleteSetlist(setId: Int)
     suspend fun addSongToSetlist(setId: Int, songId: Int)
     suspend fun removeSongFromSetlist(setId: Int, songId: Int)
+    suspend fun clearAllSetlists()
 }

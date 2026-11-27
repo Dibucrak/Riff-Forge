@@ -1,52 +1,33 @@
 package com.riffforge.feature_cloud_backup.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.riffforge.core.presentation.components.GlassBackground
-import com.riffforge.core.presentation.components.GlassButtonAccent
-import com.riffforge.core.presentation.components.GlassCard
-import com.riffforge.core.presentation.components.GlassCardElevated
-import com.riffforge.core.presentation.components.GlassSectionHeader
-import com.riffforge.core.presentation.theme.*
+import com.riffforge.core.presentation.theme.SystemGreen
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * Liquid Glass Cloud Backup Screen — frosted glass panels for backup and restore actions,
- * gradient accent buttons, and soft colored shadows.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudBackupScreen(
     onNavigateUp: () -> Unit,
@@ -54,12 +35,8 @@ fun CloudBackupScreen(
     viewModel: CloudBackupViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
-    val snackbarHostState = androidx.compose.runtime.remember {
-        androidx.compose.material3.SnackbarHostState()
-    }
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
-    val glassSurface = if (isDarkTheme) GlassSurfaceDark else GlassSurfaceLight
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = true) {
         viewModel.eventFlow.collectLatest { event ->
@@ -71,206 +48,285 @@ fun CloudBackupScreen(
         }
     }
 
-    GlassBackground(isDarkTheme = isDarkTheme) {
-        Box(
+    if (showRestoreConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirmDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("¿Restaurar desde la nube?", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Text(
+                    text = "Se descargarán e importarán las canciones y setlists de tu último respaldo en Firebase a este dispositivo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRestoreConfirmDialog = false
+                        viewModel.onEvent(CloudBackupEvent.RestoreFromCloud)
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Restaurar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreConfirmDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Respaldo en la Nube", fontWeight = FontWeight.ExtraBold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top bar — glassmorphic header
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter),
-                isDarkTheme = isDarkTheme,
-                cornerRadius = 16.dp
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Hero Sync Status Card ────────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(SystemGreen),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (state.isSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(28.dp),
+                                color = Color.Black.copy(alpha = 0.85f),
+                                strokeWidth = 3.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CloudDone,
+                                contentDescription = null,
+                                tint = Color.Black.copy(alpha = 0.85f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = when {
+                            state.isSyncing -> "Sincronizando..."
+                            state.lastSyncLabel.isNotBlank() -> "Respaldo actualizado"
+                            else -> "Listo para respaldar"
+                        },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (state.lastSyncLabel.isNotBlank()) {
+                            "Último respaldo: ${state.lastSyncLabel}"
+                        } else {
+                            "Aún no has creado un respaldo en este dispositivo"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${state.songCount}",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Canciones",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${state.setlistCount}",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Setlists",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Options Inset Card ───────────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .clickable(enabled = !state.isSyncing) {
+                            showRestoreConfirmDialog = true
+                        }
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onNavigateUp,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = glassSurface.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = textColor
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Respaldo y Restauración",
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        style = MaterialTheme.typography.titleMedium
+                        text = "Restaurar copia desde la nube",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = "Restaurar",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 72.dp, bottom = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Private Account Scope Notice ─────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-                GlassSectionHeader(
-                    isDarkTheme = isDarkTheme,
-                    title = "Sincronización en la Nube"
-                )
-
-                // Backup card
-                GlassCardElevated(
-                    modifier = Modifier.fillMaxWidth(),
-                    isDarkTheme = isDarkTheme,
-                    cornerRadius = 20.dp
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Column(
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(
-                                    AccentTint.copy(alpha = 0.15f),
-                                    androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CloudUpload,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = AccentTint
-                            )
-                        }
-
-                        Text(
-                            text = "Respaldar en la Nube",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
-
-                        Text(
-                            text = "Guarda tus canciones y setlists en la nube para no perderlos.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = dimTextColor,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        if (state.isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = AccentTint,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            GlassButtonAccent(
-                                onClick = { viewModel.onEvent(CloudBackupEvent.BackupToCloud) }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudUpload,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Respaldar Ahora", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Restore card
-                GlassCardElevated(
-                    modifier = Modifier.fillMaxWidth(),
-                    isDarkTheme = isDarkTheme,
-                    cornerRadius = 20.dp
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(
-                                    AccentTint.copy(alpha = 0.15f),
-                                    RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = AccentTint
-                            )
-                        }
-
-                        Text(
-                            text = "Restaurar desde la Nube",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
-
-                        Text(
-                            text = "Recupera tus canciones y setlists desde el último respaldo guardado.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = dimTextColor,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        if (state.isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = AccentTint,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            GlassButtonAccent(
-                                onClick = { viewModel.onEvent(CloudBackupEvent.RestoreFromCloud) }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudDownload,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Restaurar Ahora", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
+                            .padding(top = 2.dp)
+                            .size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Este respaldo es privado y exclusivo para tu cuenta personal. No sincroniza ni modifica las canciones compartidas en la Comunidad.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Bottom Primary Action Button ─────────────────────────────
+            Button(
+                onClick = { viewModel.onEvent(CloudBackupEvent.BackupToCloud) },
+                enabled = !state.isSyncing,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                if (state.isSyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sincronizar Ahora", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 }

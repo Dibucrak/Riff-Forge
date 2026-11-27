@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash screen icon: neutral background with orange accent ring around a music note -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Outer ring — orange accent -->
+    <path
+        android:pathData="M60,10 C32.4,10 10,32.4 10,60 C10,87.6 32.4,110 60,110 C87.6,110 110,87.6 110,60 C110,32.4 87.6,10 60,10 Z M60,16 C83.3,16 102,34.7 102,60 C102,83.3 83.3,102 60,102 C36.7,102 18,83.3 18,60 C18,36.7 36.7,18 60,16 Z"
+        android:fillColor="#FF9F0A" />
+
+    <!-- Music note icon — centered -->
+    <path
+        android:pathData="M52,45 L52,72 C52,74.2 53.8,76 56,76 C58.2,76 60,74.2 60,72 L60,45 L52,45 Z"
+        android:fillColor="#FF9F0A" />
+    <path
+        android:pathData="M52,42 C54.2,42 56,40.2 56,38 C56,35.8 54.2,34 52,34 C49.8,34 48,35.8 48,38 C48,40.2 49.8,42 52,42 Z"
+        android:fillColor="#FF9F0A" />
+    <path
+        android:pathData="M64,45 L64,72 C64,74.2 65.8,76 68,76 C70.2,76 72,74.2 72,72 L72,45 L64,45 Z"
+        android:fillColor="#FF9F0A" />
+    <path
+        android:pathData="M64,42 C66.2,42 68,40.2 68,38 C68,35.8 66.2,34 64,34 C61.8,34 60,35.8 60,38 C60,40.2 61.8,42 64,42 Z"
+        android:fillColor="#FF9F0A" />
+    <!-- Beam connecting notes -->
+    <path
+        android:pathData="M56,38 L68,38 L68,42 L56,42 Z"
+        android:fillColor="#FF9F0A" />
+</vector>

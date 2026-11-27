@@ -1,67 +1,60 @@
 package com.riffforge.feature_auth.presentation.login
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.riffforge.core.presentation.components.GlassBackground
-import com.riffforge.core.presentation.components.GlassButtonAccent
-import com.riffforge.core.presentation.components.GlassCard
-import com.riffforge.core.presentation.theme.*
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit = {},
     isDarkTheme: Boolean = false,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
     val isPasswordVisible = viewModel.isPasswordVisible.value
     val snackbarHostState = remember { SnackbarHostState() }
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(key1 = true) {
         viewModel.eventFlow.collectLatest { event ->
@@ -77,132 +70,302 @@ fun LoginScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        GlassBackground(isDarkTheme = isDarkTheme) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // ── Squircle Brand Logo ──────────────────────────────────────
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Logo
-                    Box(
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = "Riff Forge",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Riff Forge",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Tu estudio portátil de guitarra · Android",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // ── Connected Inset Form Card ────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Email
+                    Column(
                         modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(AccentTint.copy(alpha = 0.25f)),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = "Riff Forge Logo",
-                            tint = AccentTint,
-                            modifier = Modifier.size(40.dp)
+                        Text(
+                            text = "Correo electrónico",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        BasicTextField(
+                            value = state.emailText,
+                            onValueChange = { viewModel.onEvent(LoginEvent.EnteredEmail(it)) },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (state.emailText.isEmpty()) {
+                                    Text(
+                                        text = "tu@correo.com",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                inner()
+                            }
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Riff Forge",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = textColor,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Tu forja de acordes y setlists",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = dimTextColor
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Glass card form
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        isDarkTheme = isDarkTheme,
-                        cornerRadius = 24.dp
+                    // Password
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            OutlinedTextField(
-                                value = state.emailText,
-                                onValueChange = { newText: String -> viewModel.onEvent(LoginEvent.EnteredEmail(newText)) },
-                                label = { Text("Correo electrónico", color = dimTextColor) },
-                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = dimTextColor) },
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Email,
-                                    imeAction = ImeAction.Next
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Contraseña",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            OutlinedTextField(
+                            Spacer(modifier = Modifier.height(4.dp))
+                            BasicTextField(
                                 value = state.passwordText,
-                                onValueChange = { newText: String -> viewModel.onEvent(LoginEvent.EnteredPassword(newText)) },
-                                label = { Text("Contraseña", color = dimTextColor) },
-                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = dimTextColor) },
+                                onValueChange = { viewModel.onEvent(LoginEvent.EnteredPassword(it)) },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Password,
                                     imeAction = ImeAction.Done
                                 ),
-                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    val image = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                    IconButton(onClick = { viewModel.onEvent(LoginEvent.TogglePasswordVisibility) }) {
-                                        Icon(imageVector = image, contentDescription = "Alternar visibilidad", tint = dimTextColor)
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        focusManager.clearFocus()
+                                        if (!state.isLoading) viewModel.onEvent(LoginEvent.SignIn)
                                     }
-                                },
+                                ),
                                 modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            if (state.isLoading) {
-                                CircularProgressIndicator(
-                                    color = AccentTint,
-                                    modifier = Modifier.size(32.dp),
-                                    strokeWidth = 3.dp
-                                )
-                            } else {
-                                GlassButtonAccent(
-                                    onClick = { viewModel.onEvent(LoginEvent.SignIn) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(text = "Iniciar Sesión", fontWeight = FontWeight.Bold, color = textColor)
+                                decorationBox = { inner ->
+                                    if (state.passwordText.isEmpty()) {
+                                        Text(
+                                            text = "••••••••••",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    inner()
                                 }
-                            }
+                            )
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    TextButton(onClick = onNavigateToRegister) {
-                        Text(
-                            text = "¿No tienes cuenta? Regístrate aquí",
-                            fontWeight = FontWeight.SemiBold,
-                            color = AccentTint
-                        )
+                        IconButton(onClick = { viewModel.onEvent(LoginEvent.TogglePasswordVisibility) }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Alternar visibilidad",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
+
+            // ── Forgot Password Link ─────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 18.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = "¿Olvidaste tu contraseña?",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToForgotPassword() }
+                )
+            }
+
+            // ── Primary Sign In Button ───────────────────────────────────
+            Button(
+                onClick = { viewModel.onEvent(LoginEvent.SignIn) },
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Text(
+                        text = "Iniciar Sesión",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Divider "o continúa con" ─────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+                Text(
+                    text = "  o continúa con  ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Continue with Google Pill Button (Android) ───────────────
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable(enabled = !state.isLoading) {
+                        val activity = context.findActivity()
+                        if (activity != null) {
+                            viewModel.onEvent(LoginEvent.SignInWithGoogle(activity))
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("No se pudo abrir el flujo de Google en esta ventana")
+                            }
+                        }
+                    },
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "G",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF4285F4)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Continuar con Google",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // ── Sign Up Link ─────────────────────────────────────────────
+            Row(
+                modifier = Modifier.clickable { onNavigateToRegister() },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "¿Nuevo en Riff Forge? ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Crear cuenta",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

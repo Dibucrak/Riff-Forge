@@ -37,6 +37,9 @@ class TunerViewModel @Inject constructor(
             is TunerEvent.StopListening -> {
                 stopListening()
             }
+            is TunerEvent.SetTargetFrequency -> {
+                _state.value = state.value.copy(targetFrequency = event.targetFreq)
+            }
         }
     }
 
@@ -49,10 +52,16 @@ class TunerViewModel @Inject constructor(
         analysisJob = pitchAnalyzer.startAnalyzing()
             .onEach { pitchResult ->
                 if (pitchResult != null) {
+                    val target = _state.value.targetFrequency
+                    val adjustedCents = if (target != null && target > 0f && pitchResult.frequency > 0f) {
+                        (1200.0 * kotlin.math.log2((pitchResult.frequency / target).toDouble())).toFloat().coerceIn(-50f, 50f)
+                    } else {
+                        pitchResult.cents.coerceIn(-50f, 50f)
+                    }
                     _state.value = state.value.copy(
                         currentNote = pitchResult.noteName,
                         currentFrequency = pitchResult.frequency,
-                        centsOffset = pitchResult.cents
+                        centsOffset = adjustedCents
                     )
                 }
             }

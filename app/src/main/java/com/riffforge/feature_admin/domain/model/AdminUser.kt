@@ -9,5 +9,7 @@ data class AdminUser(
     val displayName: String?,
     val isAdmin: Boolean = false,
     val joinDate: Long = System.currentTimeMillis(),
-    val contributionCount: Int = 0
+    val contributionCount: Int = 0,
+    val photoUrl: String = "",
+    val photoData: String = ""
 )

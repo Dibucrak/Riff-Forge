@@ -1,62 +1,50 @@
 package com.riffforge.feature_auth.presentation.register
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.riffforge.core.presentation.components.GlassBackground
-import com.riffforge.core.presentation.components.GlassButtonAccent
-import com.riffforge.core.presentation.components.GlassCard
-import com.riffforge.core.presentation.theme.*
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateUp: () -> Unit,
+    onNavigateToHome: () -> Unit = onNavigateUp,
     isDarkTheme: Boolean = false,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
@@ -65,8 +53,9 @@ fun RegisterScreen(
     val isRepeatedPasswordVisible = viewModel.isRepeatedPasswordVisible.value
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
-    val textColor = if (isDarkTheme) TextOnGlassPrimaryDark else TextOnGlassPrimaryLight
-    val dimTextColor = if (isDarkTheme) TextOnGlassSecondaryDark else TextOnGlassSecondaryLight
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(key1 = true) {
         viewModel.eventFlow.collectLatest { event ->
@@ -75,7 +64,7 @@ fun RegisterScreen(
                     snackbarHostState.showSnackbar(message = event.message)
                 }
                 is RegisterViewModel.UiEvent.RegisterSuccess -> {
-                    onNavigateUp()
+                    onNavigateToHome()
                 }
             }
         }
@@ -83,170 +72,397 @@ fun RegisterScreen(
 
     Scaffold(
         topBar = {
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                isDarkTheme = isDarkTheme,
-                cornerRadius = 0.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onNavigateUp,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (isDarkTheme) SecondarySystemBackgroundDark.copy(alpha = 0.3f) else SystemGroupedBackgroundLight.copy(alpha = 0.5f)
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Crear Cuenta",
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = textColor
+                        Text(
+                            text = "Sincroniza tu repertorio · Android",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Crear Cuenta",
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        GlassBackground(isDarkTheme = isDarkTheme) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(start = 24.dp, top = 72.dp, end = 24.dp)
-                    .verticalScroll(scrollState),
-                horizontalAlignment = Alignment.CenterHorizontally
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Connected Inset Form Card ────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Únete a la comunidad",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = textColor,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    text = "Crea tu cuenta y comparte tu música",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = dimTextColor
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    isDarkTheme = isDarkTheme,
-                    cornerRadius = 24.dp
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Display name / username
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp)
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
                     ) {
-                        OutlinedTextField(
-                            value = state.displayNameText,
-                            onValueChange = { newText: String -> viewModel.onEvent(RegisterEvent.EnteredDisplayName(newText)) },
-                            label = { Text("Nombre de usuario", color = dimTextColor) },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = dimTextColor) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        Text(
+                            text = "Nombre o Usuario",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        BasicTextField(
+                            value = state.displayNameText,
+                            onValueChange = { viewModel.onEvent(RegisterEvent.EnteredDisplayName(it)) },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (state.displayNameText.isEmpty()) {
+                                    Text(
+                                        text = "Ej: Dibucrak",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                    }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
+                    )
 
-                        OutlinedTextField(
+                    // Email
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = "Correo electrónico",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        BasicTextField(
                             value = state.emailText,
-                            onValueChange = { newText: String -> viewModel.onEvent(RegisterEvent.EnteredEmail(newText)) },
-                            label = { Text("Correo electrónico", color = dimTextColor) },
-                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = dimTextColor) },
+                            onValueChange = { viewModel.onEvent(RegisterEvent.EnteredEmail(it)) },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
                             ),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = state.passwordText,
-                            onValueChange = { newText: String -> viewModel.onEvent(RegisterEvent.EnteredPassword(newText)) },
-                            label = { Text("Contraseña (mín. 6)", color = dimTextColor) },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = dimTextColor) },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Next
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
-                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                val image = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                IconButton(onClick = { viewModel.onEvent(RegisterEvent.TogglePasswordVisibility) }) {
-                                    Icon(imageVector = image, contentDescription = "Alternar visibilidad", tint = dimTextColor)
-                                }
-                            },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = state.repeatedPasswordText,
-                            onValueChange = { newText: String -> viewModel.onEvent(RegisterEvent.EnteredRepeatedPassword(newText)) },
-                            label = { Text("Confirmar contraseña", color = dimTextColor) },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = dimTextColor) },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Done
-                            ),
-                            visualTransformation = if (isRepeatedPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                val image = if (isRepeatedPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                IconButton(onClick = { viewModel.onEvent(RegisterEvent.ToggleRepeatedPasswordVisibility) }) {
-                                    Icon(imageVector = image, contentDescription = "Alternar visibilidad", tint = dimTextColor)
+                            decorationBox = { inner ->
+                                if (state.emailText.isEmpty()) {
+                                    Text(
+                                        text = "tu@correo.com",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 16.sp
+                                    )
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                color = AccentTint,
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 3.dp
-                            )
-                        } else {
-                            GlassButtonAccent(
-                                onClick = { viewModel.onEvent(RegisterEvent.SignUp) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(text = "Registrarme", fontWeight = FontWeight.Bold, color = textColor)
+                                inner()
                             }
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
+                    )
+
+                    // Password
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Contraseña (mín. 6 caracteres)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            BasicTextField(
+                                value = state.passwordText,
+                                onValueChange = { viewModel.onEvent(RegisterEvent.EnteredPassword(it)) },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                decorationBox = { inner ->
+                                    if (state.passwordText.isEmpty()) {
+                                        Text(
+                                            text = "••••••••••",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    inner()
+                                }
+                            )
+                        }
+                        IconButton(onClick = { viewModel.onEvent(RegisterEvent.TogglePasswordVisibility) }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Alternar visibilidad",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.5.dp
+                    )
+
+                    // Confirm Password
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Confirmar contraseña",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            BasicTextField(
+                                value = state.repeatedPasswordText,
+                                onValueChange = { viewModel.onEvent(RegisterEvent.EnteredRepeatedPassword(it)) },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                visualTransformation = if (isRepeatedPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        focusManager.clearFocus()
+                                        if (!state.isLoading) viewModel.onEvent(RegisterEvent.SignUp)
+                                    }
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                decorationBox = { inner ->
+                                    if (state.repeatedPasswordText.isEmpty()) {
+                                        Text(
+                                            text = "••••••••••",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    inner()
+                                }
+                            )
+                        }
+                        IconButton(onClick = { viewModel.onEvent(RegisterEvent.ToggleRepeatedPasswordVisibility) }) {
+                            Icon(
+                                imageVector = if (isRepeatedPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Alternar visibilidad",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Primary Create Account Button ────────────────────────────
+            Button(
+                onClick = { viewModel.onEvent(RegisterEvent.SignUp) },
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Text(
+                        text = "Crear Cuenta",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+                Text(
+                    text = "  o regístrate con  ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Register with Google Pill Button (Android) ───────────────
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable(enabled = !state.isLoading) {
+                        val activity = context.findActivity()
+                        if (activity != null) {
+                            viewModel.onEvent(RegisterEvent.SignInWithGoogle(activity))
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("No se pudo abrir el flujo de Google en esta ventana")
+                            }
+                        }
+                    },
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "G",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF4285F4)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Registrarse con Google",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 24.dp)
+                    .clickable { onNavigateUp() },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "¿Ya tienes cuenta? ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Inicia sesión",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

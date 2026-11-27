@@ -43,11 +43,24 @@ class SongRepositoryImpl(
         }
     }
 
+    override fun observeSongById(id: Int): Flow<Song?> {
+        return dao.observeSongById(id).map { it?.toDomain() }
+    }
+
     override suspend fun getSongById(id: Int): Song? {
         return dao.getSongById(id)?.toDomain()
     }
 
     override suspend fun insertSong(song: Song) {
         dao.insertSong(song.toEntity())
+    }
+
+    override suspend fun deleteSong(songId: Int) {
+        dao.deleteSongFromAllSetlists(songId)
+        dao.deleteSongById(songId)
+    }
+
+    override suspend fun clearAllSongs() {
+        dao.deleteAllSongs()
     }
 }

@@ -5,7 +5,9 @@ import com.riffforge.feature_contributions.domain.model.Contribution
 
 data class AdminState(
     val pendingContributions: List<Contribution> = emptyList(),
+    val allContributions: List<Contribution> = emptyList(),
     val users: List<AdminUser> = emptyList(),
+    val currentUserUid: String = "",
     val isLoading: Boolean = true,
     val selectedTab: Int = 0
 )

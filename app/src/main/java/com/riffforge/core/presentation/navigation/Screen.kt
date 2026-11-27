@@ -3,6 +3,7 @@ package com.riffforge.core.presentation.navigation
 sealed class Screen(val route: String) {
     object Login : Screen("login_screen")
     object Register : Screen("register_screen")
+    object ForgotPassword : Screen("forgot_password_screen")
 
     object Tuner : Screen("tuner_screen")
     object Songs : Screen("songs_screen")
@@ -22,4 +23,5 @@ sealed class Screen(val route: String) {
     object SetlistDetail : Screen("setlist_detail_screen")
     object Profile : Screen("profile_screen")
     object SongViewer : Screen("song_viewer_screen")
+    object CommunityExplorer : Screen("community_explorer_screen")
 }

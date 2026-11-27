@@ -4,4 +4,5 @@ sealed class MetronomeEvent {
     object TogglePlayPause : MetronomeEvent()
     data class ChangeBpm(val bpm: Int) : MetronomeEvent()
     data class ChangeBeatsPerMeasure(val beats: Int) : MetronomeEvent()
+    data class ChangeSound(val sound: MetronomeSound) : MetronomeEvent()
 }
