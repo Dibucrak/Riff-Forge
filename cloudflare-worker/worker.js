@@ -137,6 +137,12 @@ function buildArtistSlugCandidates(artist) {
     candidates.push(noArticle);
   }
   const parts = full.split("_").filter(Boolean);
+  if (parts.length >= 3) {
+    const twoWords = parts.slice(0, 2).join("_");
+    if (twoWords && !candidates.includes(twoWords)) {
+      candidates.push(twoWords);
+    }
+  }
   if (parts.length > 1 && parts[0].length >= 3 && !candidates.includes(parts[0])) {
     candidates.push(parts[0]);
   }
@@ -357,13 +363,13 @@ function normalizeSectionHeaderLine(text) {
     };
   }
   const match = trimmed.match(
-    /^(Intro(?:ducci[oó]n)?|Verso(?:\s*\d+)?|Verse(?:\s*\d+)?|Estrofa(?:\s*\d+)?|Pre-?Coro|Pre-?Chorus|Coro|Chorus|Estribillo|Puente|Bridge|Solo|Interludio|Interlude|Outro|Final)\s*(?:\([^)]*\))?(?:\s*[:.]|\s+-)?\s*(.*)$/i
+    /^(Intro(?:ducci[oó]n)?|Verso(?:\s*\d+)?|Verse(?:\s*\d+)?|Estrofa(?:\s*\d+)?|Pre-?Coro|Pre-?Chorus|Coro|Chorus|Chrous|Estribillo|Puente|Bridge|Solo|Interludio|Interlude|Outro|Final)\s*(?:\([^)]*\))?(?:\s*[:.]|\s+-)?\s*(.*)$/i
   );
   if (!match) return null;
   let label = match[1].trim();
   label = label.charAt(0).toUpperCase() + label.slice(1);
   if (/^intro/i.test(label)) label = "Intro";
-  else if (/^estribillo/i.test(label)) label = "Coro";
+  else if (/^(estribillo|chrous)/i.test(label)) label = "Coro";
   return {
     header: `[${label}]`,
     remainder: (match[2] || "").trim(),
@@ -400,12 +406,22 @@ function parseLaCuerdaPre(rawPreHtml, rawOdes, maxWidth = 42) {
     return { text, hadChordTag, isChordLine };
   });
 
-  // Expand section prefixes such as "Intro:(C-Em)" or "Coro:(Bis)"
+  // Expand section prefixes such as "Intro:(C-Em)" or "Coro:(Bis)" and strip ASCII tabs/melody lines
+  let tabLineCount = 0;
   const expanded = [];
   for (const item of analyzed) {
     const trimmed = item.text.trim();
     if (!trimmed) {
       expanded.push({ text: "", isChordLine: false, isSection: false });
+      continue;
+    }
+
+    if (/^\s*[eBGDAE]\|[-0-9hpb/\\x|:\s~^()\[\]]+/i.test(item.text)) {
+      tabLineCount += 1;
+      continue;
+    }
+    if (/^[-=_~*]{3,}$/.test(trimmed)) continue;
+    if (/^\(\s*[A-G][#b]?[1-7](?:[\s-]+[A-G][#b]?[1-7])+\s*\)$/.test(trimmed)) {
       continue;
     }
 
@@ -511,11 +527,13 @@ function parseLaCuerdaPre(rawPreHtml, rawOdes, maxWidth = 42) {
   }
 
   // Build final structured lines (marking which lines are chord lines for Simplificado mapping & wrapping)
+  let lyricPairs = 0;
   const finalLines = [];
   for (let i = 0; i < cleanedLines.length; i++) {
     const curr = cleanedLines[i];
     const next = i + 1 < cleanedLines.length ? cleanedLines[i + 1] : null;
     if (curr.isChordLine && next && !next.isChordLine && !next.isSection && next.text.trim()) {
+      if (next.text.trim().length >= 8) lyricPairs += 1;
       const cText = curr.text;
       const lText = next.text.replace(/^\s+/, "").trimEnd();
       const leadSpaces = next.text.length - next.text.replace(/^\s+/, "").length;
@@ -545,6 +563,8 @@ function parseLaCuerdaPre(rawPreHtml, rawOdes, maxWidth = 42) {
   return {
     lines: finalLines,
     chords: detectedChords.slice(0, 16),
+    tabLineCount,
+    lyricPairs,
   };
 }
 
@@ -582,6 +602,8 @@ function extractLaCuerdaFromHtml(html) {
     title: decodeHtmlEntities(orolaMatch ? orolaMatch[1] : "").trim(),
     chords: parsed.chords,
     lines: parsed.lines,
+    tabLineCount: parsed.tabLineCount || 0,
+    lyricPairs: parsed.lyricPairs || 0,
   };
 }
 
@@ -592,23 +614,35 @@ async function fetchLaCuerdaChordSheet(artist, title) {
 
   // 1. Direct URL fast lookup
   const directCandidates = [];
-  for (const aSlug of artistSlugs.slice(0, 2)) {
+  for (const aSlug of artistSlugs.slice(0, 3)) {
     for (const sSlug of songSlugs.slice(0, 2)) {
       directCandidates.push(`https://acordes.lacuerda.net/${aSlug}/${sSlug}.shtml`);
     }
   }
 
-  for (const url of directCandidates.slice(0, 3)) {
+  for (const url of directCandidates.slice(0, 5)) {
     const html = await fetchLaCuerdaPage(url);
     const sheet = extractLaCuerdaFromHtml(html);
     if (sheet) {
+      if (sheet.tabLineCount >= 4 || sheet.lyricPairs < 4) {
+        const baseUrl = url.replace(/\.shtml$/i, "");
+        const alts = await Promise.all(
+          [`${baseUrl}-2.shtml`, `${baseUrl}-3.shtml`].map(async (altUrl) => {
+            const altHtml = await fetchLaCuerdaPage(altUrl);
+            const altSheet = extractLaCuerdaFromHtml(altHtml);
+            return altSheet ? { ...altSheet, sourceUrl: altUrl } : null;
+          })
+        );
+        const cleaner = alts.find((a) => a && a.tabLineCount < 4 && a.lyricPairs >= 4);
+        if (cleaner) return cleaner;
+      }
       return { ...sheet, sourceUrl: url };
     }
   }
 
   // 2. Artist directory fallback (handles slight differences like "de_nuevo" vs "d_nuevo" or "-2")
   const queryTokens = tokenizeNormalized(title);
-  for (const aSlug of artistSlugs.slice(0, 2)) {
+  for (const aSlug of artistSlugs.slice(0, 3)) {
     const indexHtml = await fetchLaCuerdaPage(`https://acordes.lacuerda.net/${aSlug}/`);
     if (!indexHtml) continue;
 
@@ -697,6 +731,7 @@ function parseGuitareTabHtml(html, maxWidth = 42) {
   let capo = 0;
   let tuning = "E Standard";
   let tabLineCount = 0;
+  let hasGermanH = false;
 
   for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
     const t = rawRows[i].text.trim();
@@ -727,8 +762,9 @@ function parseGuitareTabHtml(html, maxWidth = 42) {
     if (/^[-=_~*]{3,}$/.test(t)) continue;
     if (
       /^\s*chords\s*:/i.test(t) ||
-      /^\s*(?:chords\s*:\s*)?[A-G][^\s]{0,10}\s*[:=-]?\s*[xX0-9]{5,6}\b/i.test(t)
+      /^\s*(?:chords\s*:\s*)?[A-H][^\s]{0,10}\s*[:=-]?\s*[xX0-9]{5,6}\b/i.test(t)
     ) {
+      if (/\bH(?:m|7|maj7|dim)?\b/.test(t)) hasGermanH = true;
       continue;
     }
 
@@ -826,6 +862,7 @@ function parseGuitareTabHtml(html, maxWidth = 42) {
   const detectedChords = [];
   for (const row of cleanedLines) {
     if (!row.isChordLine) continue;
+    if (/\bH(?:m|7|maj7|dim)?\b/.test(row.text)) hasGermanH = true;
     const tokens = row.text.replace(/[()[\]|,-]/g, " ").split(/\s+/);
     for (const tok of tokens) {
       const c = tok.trim();
@@ -878,6 +915,7 @@ function parseGuitareTabHtml(html, maxWidth = 42) {
     tuning,
     lyricPairs,
     tabLineCount,
+    hasGermanH,
   };
 }
 
@@ -998,7 +1036,8 @@ async function fetchGuitareTabChordSheet(artist, title, styleHint = "Original") 
           cand.score * 10 +
           Math.min(parsed.lyricPairs, 20) * 3 +
           Math.min(parsed.chords.length, 8) * 2 -
-          parsed.tabLineCount * 20;
+          parsed.tabLineCount * 20 -
+          (parsed.hasGermanH ? 120 : 0);
         return { cand, parsed, url, rank };
       } catch {
         return null;
@@ -1017,8 +1056,366 @@ async function fetchGuitareTabChordSheet(artist, title, styleHint = "Original") 
     lines: winner.parsed.lines,
     capo: winner.parsed.capo,
     tuning: winner.parsed.tuning,
+    hasGermanH: Boolean(winner.parsed.hasGermanH),
+    isStandardChords: Boolean(winner.cand.isStandardChords),
     sourceUrl: winner.url,
   };
+}
+
+function parseGuitarTabsCcHtml(html, maxWidth = 42) {
+  if (!html) return null;
+  const preBlocks = [];
+  const preRe = /<pre[^>]*>([\s\S]*?)<\/pre>/gi;
+  let preMatch;
+  while ((preMatch = preRe.exec(html)) !== null) {
+    if (preMatch[1] && preMatch[1].length >= 120) {
+      preBlocks.push(preMatch[1]);
+    }
+  }
+  if (preBlocks.length === 0) return null;
+  preBlocks.sort((a, b) => b.length - a.length);
+  const rawText = decodeHtmlEntities(preBlocks[0].replace(/<[^>]+>/g, ""));
+  const rawLines = rawText.replace(/\r\n/g, "\n").split("\n").map((l) => expandTabs(l).replace(/\s+$/g, ""));
+
+  let capo = 0;
+  let tuning = "E Standard";
+  let tabLineCount = 0;
+
+  for (let i = 0; i < Math.min(rawLines.length, 20); i++) {
+    const t = rawLines[i].trim();
+    if (!t) continue;
+    const capoMatch =
+      t.match(/\bcapo\b[^0-9\n]{0,12}(\d)/i) ||
+      (/\bcapo\b/i.test(t) ? t.match(/(\d)(?:st|nd|rd|th)\s+fret/i) : null);
+    if (capoMatch && !capo) {
+      const n = Number(capoMatch[1]);
+      if (Number.isFinite(n) && n >= 0 && n <= 9) capo = n;
+    }
+    if (/\b(?:half[\s-]*step\s+down|eb\s+standard|d#\s+standard)\b/i.test(t)) {
+      tuning = "Eb Standard (½ tono abajo)";
+    }
+  }
+
+  const filteredLines = [];
+  let inlineBracketLineCount = 0;
+  for (const line of rawLines) {
+    const t = line.trim();
+    if (!t) {
+      filteredLines.push("");
+      continue;
+    }
+    if (/^#/.test(t)) continue;
+    if (/^\[?\s*Tab from:/i.test(t)) continue;
+    if (/^(?:Title|Artist|Song|Album|Tabbed by|Written by|Performed on|Tuning|Capo)\s*[:\-]/i.test(t)) continue;
+    if (/^EADGBE$/i.test(t) || /^chords$/i.test(t)) continue;
+    if (/^[-=_~*]{3,}$/.test(t)) continue;
+    if (
+      /^\s*chords\s*:/i.test(t) ||
+      /^\s*(?:chords\s*:\s*)?[A-H][^\s]{0,10}\s*[:=-]?\s*[xX0-9]{5,6}\b/i.test(t)
+    ) {
+      continue;
+    }
+    if (/^\s*[eBGDAE]\|[-0-9hpb/\\x|:\s~^()\[\]]+/i.test(line)) {
+      tabLineCount += 1;
+      continue;
+    }
+    if (/\[[A-G](?:#|b)?[^\]]{0,10}\]/.test(t) && t.replace(/\[[^\]]+\]/g, "").trim().length >= 8) {
+      inlineBracketLineCount += 1;
+    }
+    filteredLines.push(line);
+  }
+
+  if (inlineBracketLineCount >= 4) {
+    const chordProCleaned = filteredLines
+      .map((l) => {
+        const tr = l.trim();
+        if (!tr) return "";
+        const sec = normalizeSectionHeaderLine(tr);
+        if (sec && !sec.remainder) return sec.header;
+        if (/^\{[^}]+\}$/.test(tr)) return "";
+        return l;
+      })
+      .join("\n");
+    const overLyricText = chordProToOverLyric(chordProCleaned, maxWidth);
+    const outLines = overLyricText.split("\n");
+    const detectedChords = [];
+    const finalLines = [];
+    let lyricPairs = 0;
+
+    for (let i = 0; i < outLines.length; i++) {
+      const text = outLines[i];
+      const tr = text.trim();
+      const isSection = tr.startsWith("[") && tr.endsWith("]") && tr.length <= 36;
+      const wTokens = tr.replace(/[()[\]|,-]/g, " ").split(/\s+/).filter(Boolean);
+      const isChordLine = !isSection && wTokens.length > 0 && wTokens.every((tok) => CHORD_TOKEN_RE.test(tok));
+      if (isChordLine) {
+        for (const tok of wTokens) {
+          if (!detectedChords.includes(tok)) detectedChords.push(tok);
+        }
+        const nextLine = i + 1 < outLines.length ? outLines[i + 1].trim() : "";
+        if (nextLine.length >= 8 && !(nextLine.startsWith("[") && nextLine.endsWith("]"))) {
+          lyricPairs += 1;
+        }
+      }
+      finalLines.push({ text, isChordLine });
+    }
+    if (detectedChords.length < 2 || lyricPairs < 4 || tabLineCount > 12) return null;
+    return { chords: detectedChords.slice(0, 16), lines: finalLines, capo, tuning, lyricPairs, tabLineCount };
+  }
+
+  const expanded = [];
+  for (const line of filteredLines) {
+    const t = line.trim();
+    if (!t) {
+      expanded.push({ text: "", isChordLine: false, isSection: false });
+      continue;
+    }
+    const sec = normalizeSectionHeaderLine(t);
+    if (sec) {
+      expanded.push({ text: sec.header, isChordLine: false, isSection: true });
+      if (sec.remainder) {
+        const remClean = sec.remainder.replace(/^[(:]+|[)]+$/g, "").trim();
+        const chordParts = remClean
+          .replace(/\b[xX]\d+\b|\b\d+[xX]\b/g, " ")
+          .replace(/[()]/g, " ")
+          .replace(/-/g, "   ")
+          .split(/\s+/)
+          .filter(Boolean);
+        if (chordParts.length > 0 && chordParts.every((p) => CHORD_TOKEN_RE.test(p))) {
+          expanded.push({ text: chordParts.join("   "), isChordLine: true, isSection: false });
+        }
+      }
+      continue;
+    }
+    const cleanedTokens = t
+      .replace(/[()[\]|]/g, " ")
+      .replace(/\s*-\s*/g, " ")
+      .replace(/\b[xX]\d+\b|\b\d+[xX]\b/g, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+    const strictAllValidChords =
+      cleanedTokens.length > 0 && cleanedTokens.every((tok) => CHORD_TOKEN_RE.test(tok));
+    if (strictAllValidChords) {
+      expanded.push({
+        text: line.replace(/([A-G](?:#|b)?[^ \t\n()-]*)-([A-G])/g, "$1  $2").trimEnd(),
+        isChordLine: true,
+        isSection: false,
+      });
+    } else {
+      expanded.push({ text: line.trimEnd(), isChordLine: false, isSection: false });
+    }
+  }
+
+  const firstChordIdx = expanded.findIndex((r) => r.isChordLine);
+  if (firstChordIdx < 0) return null;
+  let startIdx = firstChordIdx;
+  if (firstChordIdx > 0 && expanded[firstChordIdx - 1].isSection) {
+    startIdx = firstChordIdx - 1;
+  }
+  const trimmedHead = expanded.slice(startIdx);
+
+  let lastChordIdx = -1;
+  for (let i = trimmedHead.length - 1; i >= 0; i--) {
+    if (trimmedHead[i].isChordLine) {
+      lastChordIdx = i;
+      break;
+    }
+  }
+  if (lastChordIdx >= 0) {
+    let cutoff = lastChordIdx;
+    for (let j = lastChordIdx + 1; j < trimmedHead.length && j <= lastChordIdx + 3; j++) {
+      const lt = trimmedHead[j].text.trim();
+      if (!lt) break;
+      if (
+        /\b(enjoy|hope you|first tab|thank|thanks|comment|rate|subscribe|written by|submitted by)\b/i.test(lt) ||
+        /@/.test(lt) ||
+        /https?:\/\//i.test(lt)
+      ) {
+        break;
+      }
+      cutoff = j;
+    }
+    trimmedHead.splice(cutoff + 1);
+  }
+
+  const cleanedLines = [];
+  for (const row of trimmedHead) {
+    if (!row.text.trim()) {
+      if (cleanedLines.length > 0 && cleanedLines[cleanedLines.length - 1].text !== "") {
+        cleanedLines.push({ text: "", isChordLine: false, isSection: false });
+      }
+      continue;
+    }
+    cleanedLines.push(row);
+  }
+  while (cleanedLines.length > 0 && cleanedLines[cleanedLines.length - 1].text === "") {
+    cleanedLines.pop();
+  }
+
+  const detectedChords = [];
+  for (const row of cleanedLines) {
+    if (!row.isChordLine) continue;
+    const tokens = row.text.replace(/[()[\]|,-]/g, " ").split(/\s+/);
+    for (const tok of tokens) {
+      const c = tok.trim();
+      if (c && CHORD_TOKEN_RE.test(c) && !detectedChords.includes(c)) {
+        detectedChords.push(c);
+      }
+    }
+  }
+
+  let lyricPairs = 0;
+  const finalLines = [];
+  for (let i = 0; i < cleanedLines.length; i++) {
+    const curr = cleanedLines[i];
+    const next = i + 1 < cleanedLines.length ? cleanedLines[i + 1] : null;
+    if (curr.isChordLine && next && !next.isChordLine && !next.isSection && next.text.trim()) {
+      if (next.text.trim().length >= 8) lyricPairs += 1;
+      const cText = curr.text;
+      const lText = next.text.replace(/^\s+/, "").trimEnd();
+      const leadSpaces = next.text.length - next.text.replace(/^\s+/, "").length;
+      const adjChord =
+        leadSpaces > 0 && cText.startsWith(" ".repeat(leadSpaces))
+          ? cText.slice(leadSpaces)
+          : cText;
+
+      if (Math.max(adjChord.length, lText.length) > maxWidth) {
+        const wrapped = wrapOverLyricPair(adjChord, lText, maxWidth);
+        for (const lineStr of wrapped) {
+          const wTokens = lineStr.trim().replace(/[()[\]|,-]/g, " ").split(/\s+/).filter(Boolean);
+          const isWChord = wTokens.length > 0 && wTokens.every((tok) => CHORD_TOKEN_RE.test(tok));
+          finalLines.push({ text: lineStr, isChordLine: isWChord });
+        }
+      } else {
+        finalLines.push({ text: adjChord, isChordLine: true });
+        finalLines.push({ text: lText, isChordLine: false });
+      }
+      i += 1;
+    } else {
+      finalLines.push({ text: curr.text, isChordLine: curr.isChordLine });
+    }
+  }
+
+  if (detectedChords.length < 2 || lyricPairs < 4 || tabLineCount > 12) {
+    return null;
+  }
+
+  return {
+    chords: detectedChords.slice(0, 16),
+    lines: finalLines,
+    capo,
+    tuning,
+    lyricPairs,
+    tabLineCount,
+  };
+}
+
+async function fetchGuitarTabsCcChordSheet(artist, title) {
+  const artistSlugs = buildArtistSlugCandidates(artist);
+  const songSlugs = buildSongSlugCandidates(title);
+  if (songSlugs.length === 0) return null;
+
+  const directUrls = [];
+  for (const aSlug of artistSlugs.slice(0, 3)) {
+    if (!aSlug) continue;
+    for (const sSlug of songSlugs.slice(0, 2)) {
+      const url = `https://www.guitartabs.cc/tabs/${aSlug[0]}/${aSlug}/${sSlug}_crd.html`;
+      if (!directUrls.includes(url)) directUrls.push(url);
+    }
+  }
+
+  const fetchAndParseCc = async (url) => {
+    try {
+      const resp = await fetch(url, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        signal: AbortSignal.timeout(4500),
+      });
+      if (!resp.ok) return null;
+      const html = await resp.text();
+      const parsed = parseGuitarTabsCcHtml(html, 42);
+      if (!parsed) return null;
+      return { url, parsed };
+    } catch {
+      return null;
+    }
+  };
+
+  if (directUrls.length > 0) {
+    const directHits = (await Promise.all(directUrls.slice(0, 4).map(fetchAndParseCc))).filter(Boolean);
+    if (directHits.length > 0) {
+      directHits.sort((a, b) => (b.parsed.lyricPairs - b.parsed.tabLineCount) - (a.parsed.lyricPairs - a.parsed.tabLineCount));
+      const best = directHits[0];
+      return {
+        artist: artist || "",
+        title: title || "",
+        chords: best.parsed.chords,
+        lines: best.parsed.lines,
+        capo: best.parsed.capo,
+        tuning: best.parsed.tuning,
+        sourceUrl: best.url,
+      };
+    }
+  }
+
+  // Search fallback
+  try {
+    const searchUrl = `https://www.guitartabs.cc/search.php?tabtype=chords&band=${encodeURIComponent(
+      artist || ""
+    )}&song=${encodeURIComponent(title || "")}`;
+    const resp = await fetch(searchUrl, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(4500),
+    });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    const artistTokens = tokenizeNormalized(artist);
+    const titleTokens = tokenizeNormalized(title);
+    const linkRe = /href=["'](\/tabs\/[a-z0-9]\/([^/"']+)\/[^"']*_crd\.html)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const cands = [];
+    let m;
+    while ((m = linkRe.exec(html)) !== null) {
+      const href = m[1];
+      const slugArtistTokens = tokenizeNormalized(m[2].replace(/_/g, " "));
+      const label = decodeHtmlEntities(m[3].replace(/<[^>]+>/g, " ")).replace(/\bacordes|chords\b/gi, " ").trim();
+      const entryTitleTokens = tokenizeNormalized(label);
+      if (artistTokens.length > 0 && !artistTokens.some((at) => slugArtistTokens.includes(at))) continue;
+      let overlap = 0;
+      for (const tt of titleTokens) {
+        if (entryTitleTokens.includes(tt)) overlap += 1;
+      }
+      const ratio = titleTokens.length > 0 ? overlap / Math.max(titleTokens.length, entryTitleTokens.length) : 0;
+      if (ratio < 0.5) continue;
+      const fullUrl = `https://www.guitartabs.cc${href}`;
+      if (!cands.some((c) => c.url === fullUrl)) cands.push({ url: fullUrl, ratio });
+    }
+    cands.sort((a, b) => b.ratio - a.ratio);
+    const hits = (await Promise.all(cands.slice(0, 2).map((c) => fetchAndParseCc(c.url)))).filter(Boolean);
+    if (hits.length > 0) {
+      hits.sort((a, b) => b.parsed.lyricPairs - a.parsed.lyricPairs);
+      const best = hits[0];
+      return {
+        artist: artist || "",
+        title: title || "",
+        chords: best.parsed.chords,
+        lines: best.parsed.lines,
+        capo: best.parsed.capo,
+        tuning: best.parsed.tuning,
+        sourceUrl: best.url,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 function normalizeKey(rawKey) {
@@ -1689,10 +2086,11 @@ export default {
         const resolvedArtist = identity.artist;
         const resolvedTitle = identity.title;
 
-        // Step 2: In parallel, try LaCuerda + GuitareTab verified chord sheets + YouTube video resolution
-        const [lacuerdaSheet, guitareTabSheet, resolvedVideo] = await Promise.all([
+        // Step 2: In parallel, try LaCuerda + GuitareTab + GuitarTabs.cc verified chord sheets + YouTube resolution
+        const [lacuerdaSheet, guitareTabSheet, guitarTabsCcSheet, resolvedVideo] = await Promise.all([
           fetchLaCuerdaChordSheet(resolvedArtist, resolvedTitle),
           fetchGuitareTabChordSheet(resolvedArtist, resolvedTitle, styleHint),
+          fetchGuitarTabsCcChordSheet(resolvedArtist, resolvedTitle),
           !videoId ? resolveYouTubeVideoForQuery(resolvedArtist, resolvedTitle, rawInput) : Promise.resolve(null),
         ]);
 
@@ -1704,12 +2102,21 @@ export default {
           if (!channelAuthor && resolvedVideo.channelAuthor) channelAuthor = resolvedVideo.channelAuthor;
         }
 
-        // ── Tier 1A / 1B: Grounded human-transcribed chord sheet (LaCuerda / GuitareTab) ──
-        const groundedSheet = lacuerdaSheet
-          ? { ...lacuerdaSheet, sourceKey: "lacuerda", capo: 0, tuning: "E Standard" }
-          : guitareTabSheet
-          ? { ...guitareTabSheet, sourceKey: "guitaretab" }
-          : null;
+        // ── Tier 1A / 1B / 1C: Grounded human-transcribed chord sheet (LaCuerda / GuitareTab / GuitarTabs.cc) ──
+        let groundedSheet = null;
+        if (lacuerdaSheet) {
+          groundedSheet = { ...lacuerdaSheet, sourceKey: "lacuerda", capo: 0, tuning: "E Standard" };
+        } else if (
+          guitareTabSheet &&
+          !guitareTabSheet.hasGermanH &&
+          (guitareTabSheet.isStandardChords || !guitarTabsCcSheet)
+        ) {
+          groundedSheet = { ...guitareTabSheet, sourceKey: "guitaretab" };
+        } else if (guitarTabsCcSheet) {
+          groundedSheet = { ...guitarTabsCcSheet, sourceKey: "guitartabs" };
+        } else if (guitareTabSheet) {
+          groundedSheet = { ...guitareTabSheet, sourceKey: "guitaretab" };
+        }
 
         if (groundedSheet) {
           const finalArtist = groundedSheet.artist || resolvedArtist || channelAuthor || "Artista";
@@ -1767,7 +2174,7 @@ export default {
             practiceTip,
             hasLyrics: content.split("\n").length > 4,
             lyricsSource: groundedSheet.sourceKey,
-            chordSource: groundedSheet.sourceKey,
+            chordSource: groundedSheet.sourceKey === "lacuerda" ? "lacuerda" : "guitaretab",
             youtubeUrl,
             youtubeVideoId: videoId || "",
             thumbnailUrl,
