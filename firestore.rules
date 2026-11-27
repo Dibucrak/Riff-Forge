@@ -1,0 +1,255 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// This security rules file assumes the following Cloud Firestore
+// structures for the Riff Forge app (Android :app, KMP :composeApp,
+// and iOS AppDelegate):
+//
+// Collection: users
+// Document ID: {userId} (Firebase Auth UID)
+// Fields:
+//   - email: string (required on create, immutable, max 254 chars, valid email or empty string)
+//   - displayName: string (required on create, max 100 chars)
+//   - username: string (required on create, 1..60 chars on update, max 60 chars)
+//   - isAdmin: bool (required on create, must be false on create, immutable for non-admins)
+//   - joinDate: int (epoch millis >= 0) or timestamp (required on create, immutable)
+//   - photoUrl: string or null (optional, max 2048 chars)
+//   - photoData: string or null (optional, max 180000 chars)
+//
+// Collection: public_profiles
+// Document ID: {userId} (Firebase Auth UID)
+// Fields:
+//   - displayName: string or null (optional, max 100 chars)
+//   - username: string or null (optional, max 60 chars)
+//   - photoUrl: string or null (optional, max 2048 chars)
+//   - photoData: string or null (optional, max 180000 chars)
+//
+// Subcollection: users/{userId}/backups
+// Document ID: {backupId} (e.g., "latest")
+// Fields:
+//   - songs: list (required, max 500 items) - serialized Song/CloudSongDto objects
+//   - setlists: list (required, max 200 items) - serialized SetlistDetail/CloudSetlistDto objects
+//
+// Collection: contributions
+// Document ID: {contributionId} (auto-generated Firestore document ID)
+// Fields:
+//   - id: string (required on create, must equal contributionId, immutable, 1..128 chars)
+//   - title: string (required on create, 1..200 chars)
+//   - artist: string (required on create, 0..200 chars)
+//   - key: string (required on create, 0..50 chars)
+//   - tuning: string (required on create, 0..100 chars)
+//   - bpm: int (required on create, 0..500)
+//   - content: string (required on create, 1..50000 chars)
+//   - authorId: string (required on create, must equal request.auth.uid, immutable, 1..128 chars)
+//   - authorName: string (required on create, 1..100 chars)
+//   - isApproved: bool (required on create)
+//   - approved: bool (optional; written by admin approveContribution alongside isApproved)
+//   - timestamp: int (epoch millis >= 0) or timestamp (required on create, immutable)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the request comes from an authenticated Firebase Auth user
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Alias for readability across helper/domain checks
+    function isAuthenticated() {
+      return isSignedIn();
+    }
+
+    // Check if the authenticated user owns the target userId path
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user is a persisted admin on /users/{uid}.
+    // Always guards with exists(...) before reading persisted document data.
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
+    }
+
+    // Validate required fields exist on the resulting document
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Validate that the document contains only allowed fields (strict schema)
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Validate that none of the specified immutable fields were added, removed, or modified
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string &&
+        email.size() <= 254 &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Validate a list type with a maximum size bound
+    function isValidList(listVal, maxSize) {
+      return listVal is list && listVal.size() <= maxSize;
+    }
+
+    // ===============================================================
+    // Domain Validators (Called in BOTH create and update rules)
+    // ===============================================================
+
+    // Validate /users/{userId} document schema, types, and size bounds
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['email', 'displayName', 'username', 'isAdmin', 'joinDate', 'photoUrl', 'photoData']) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 254 && (data.email == '' || isValidEmail(data.email)))) &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('username' in data) || (data.username is string && data.username.size() <= 60)) &&
+        (!('isAdmin' in data) || data.isAdmin is bool) &&
+        (!('joinDate' in data) || (data.joinDate is int && data.joinDate >= 0) || data.joinDate is timestamp) &&
+        (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 2048)) &&
+        (!('photoData' in data) || data.photoData == null || (data.photoData is string && data.photoData.size() <= 180000));
+    }
+
+    // Validate /public_profiles/{userId} public avatar & display metadata (strictly no PII)
+    function isValidPublicProfile(data) {
+      return hasOnlyAllowedFields(['displayName', 'username', 'photoUrl', 'photoData']) &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('username' in data) || data.username == null || (data.username is string && data.username.size() <= 60)) &&
+        (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 2048)) &&
+        (!('photoData' in data) || data.photoData == null || (data.photoData is string && data.photoData.size() <= 180000));
+    }
+
+    // Validate /users/{userId}/backups/{backupId} document schema, types, and list bounds
+    function isValidBackup(data) {
+      return hasOnlyAllowedFields(['songs', 'setlists']) &&
+        hasRequiredFields(['songs', 'setlists']) &&
+        isValidList(data.songs, 500) &&
+        isValidList(data.setlists, 200);
+    }
+
+    // Validate /contributions/{contributionId} document schema, types, and size/range bounds
+    function isValidContribution(data) {
+      return hasOnlyAllowedFields([
+          'id', 'title', 'artist', 'key', 'tuning', 'bpm',
+          'content', 'authorId', 'authorName', 'isApproved', 'approved', 'timestamp'
+        ]) &&
+        (!('id' in data) || (data.id is string && data.id.size() >= 1 && data.id.size() <= 128)) &&
+        (!('title' in data) || (data.title is string && data.title.size() >= 1 && data.title.size() <= 200)) &&
+        (!('artist' in data) || (data.artist is string && data.artist.size() <= 200)) &&
+        (!('key' in data) || (data.key is string && data.key.size() <= 50)) &&
+        (!('tuning' in data) || (data.tuning is string && data.tuning.size() <= 100)) &&
+        (!('bpm' in data) || (data.bpm is int && data.bpm >= 0 && data.bpm <= 500)) &&
+        (!('content' in data) || (data.content is string && data.content.size() >= 1 && data.content.size() <= 50000)) &&
+        (!('authorId' in data) || (data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128)) &&
+        (!('authorName' in data) || (data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100)) &&
+        (!('isApproved' in data) || data.isApproved is bool) &&
+        (!('approved' in data) || data.approved is bool) &&
+        (!('timestamp' in data) || (data.timestamp is int && data.timestamp >= 0) || data.timestamp is timestamp);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Users collection (contains PII such as email; never readable by other non-admin users)
+    match /users/{userId} {
+      // Only the document owner or an admin can read a single user profile
+      allow get: if isOwner(userId) || isAdmin();
+
+      // Only admins can list all registered users (Admin Panel)
+      allow list: if isAdmin();
+
+      // Owners create their own user profile on sign-up, Google sign-in, or delete rollback.
+      // Self-escalation is blocked by requiring isAdmin == false.
+      allow create: if isOwner(userId) &&
+        hasRequiredFields(['email', 'displayName', 'username', 'isAdmin', 'joinDate']) &&
+        isValidUser(request.resource.data) &&
+        request.resource.data.displayName is string &&
+        request.resource.data.get('isAdmin', false) == false;
+
+      // Owners may update their own profile fields (e.g., username, displayName, photoUrl, photoData) only when
+      // isAdmin, email, and joinDate are unchanged; admins may toggle isAdmin on any user.
+      allow update: if isValidUser(request.resource.data) && (
+        (
+          isOwner(userId) &&
+          areImmutableFieldsUnchanged(['isAdmin', 'email', 'joinDate']) &&
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['username']) ||
+            ('username' in request.resource.data && request.resource.data.username is string && request.resource.data.username.size() >= 1)
+          ) &&
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['displayName']) ||
+            ('displayName' in request.resource.data && request.resource.data.displayName is string)
+          )
+        ) || (
+          isAdmin() &&
+          areImmutableFieldsUnchanged(['email', 'joinDate'])
+        )
+      );
+
+      // Owners may delete their own account data, and admins may delete users from Admin Panel
+      allow delete: if isOwner(userId) || isAdmin();
+
+      // Cloud catalog backups subcollection (/users/{userId}/backups/{backupId})
+      match /backups/{backupId} {
+        // Owner can read/backup/restore; admin can list/read and delete during user deletion
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidBackup(request.resource.data);
+        allow update: if isOwner(userId) && isValidBackup(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Community contributions collection (public song chord sheets; no PII)
+    match /contributions/{contributionId} {
+      // Signed-in users can read/list approved and pending contributions
+      allow read: if isSignedIn();
+
+      // Signed-in users can publish contributions attributed strictly to their own UID
+      allow create: if isSignedIn() &&
+        hasRequiredFields([
+          'id', 'title', 'artist', 'key', 'tuning', 'bpm',
+          'content', 'authorId', 'authorName', 'timestamp'
+        ]) &&
+        ('isApproved' in request.resource.data || 'approved' in request.resource.data) &&
+        isValidContribution(request.resource.data) &&
+        request.resource.data.id == contributionId &&
+        request.resource.data.authorId == request.auth.uid;
+
+      // Only admins can moderate/update contributions (e.g., approveContribution)
+      allow update: if isAdmin() &&
+        isValidContribution(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'authorId', 'timestamp']);
+
+      // Admins (moderation or user deletion) or the original author can delete a contribution
+      allow delete: if isAdmin() ||
+        (isSignedIn() && resource.data.authorId == request.auth.uid);
+    }
+
+    // Public author/user display & avatar profiles (strictly non-PII subset for Community UI)
+    match /public_profiles/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidPublicProfile(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Explicit catch-all deny for any unspecified collection or document path
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -9,19 +9,36 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+/app/build
 /composeApp/build
 /shared/build
+.kotlin/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# iOS & Xcode user/generated files
+iosApp/Pods/
+xcuserdata/
+*.xcuserstate
 
 # Agent memory — never commit
 .junie/
 
 # API keys and secrets
 google-services.json
+GoogleService-Info.plist
+keystore.properties
+keystore/
 *.jks
+*.keystore
 *.p12
 *.p8
 FirebaseOptions.plist
+
+# Local skills, release binaries, and IDE noise
+skills/
+release-artifacts/
+.idea/misc.xml
+.idea/xcode.xml
