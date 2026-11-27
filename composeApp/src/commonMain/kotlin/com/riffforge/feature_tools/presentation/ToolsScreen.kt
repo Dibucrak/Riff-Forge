@@ -52,11 +52,18 @@ fun ToolsScreen(
     onNavigateToDailyLearning: () -> Unit = { navigator?.push(DailyLearningToolScreen()) },
     onNavigateToProgressions: () -> Unit = { navigator?.push(ProgressionsToolScreen()) },
     onNavigateToScales: () -> Unit = { navigator?.push(ScalesToolScreen()) },
-    onNavigateToCommunity: () -> Unit = { navigator?.push(CommunityToolScreen()) }
+    onNavigateToCommunity: () -> Unit = { navigator?.push(CommunityToolScreen()) },
+    onNavigateToAiChords: () -> Unit = { navigator?.push(AiChordsToolScreen()) }
 ) {
     val scrollState = rememberScrollState()
 
     val practiceTools = listOf(
+        ToolEntry(
+            title = "AI Chords (YouTube)",
+            description = "Pega un link de YouTube y extrae acordes con IA.",
+            icon = Icons.Default.AutoAwesome,
+            onClick = onNavigateToAiChords
+        ),
         ToolEntry(
             title = "Metrónomo",
             description = "Compás, tempo y tap tempo en tiempo real.",
@@ -142,9 +149,9 @@ fun ToolsScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            // ── Grupo 1: Práctica & Afinación ──────────────────────────
+            // ── Grupo 1: Práctica & IA ───────────────────────────────
             ToolsGroupCard(
-                groupTitle = "Práctica & Afinación",
+                groupTitle = "Práctica & IA",
                 entries = practiceTools
             )
 

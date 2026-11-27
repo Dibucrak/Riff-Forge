@@ -1,11 +1,14 @@
 package com.riffforge.feature_tools.presentation
 
 import androidx.compose.runtime.Composable
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.riffforge.feature_ai_chords.presentation.AiChordsScreen
+import com.riffforge.feature_ai_chords.presentation.AiChordsViewModel
 import com.riffforge.feature_chords.presentation.ChordDictionaryScreen
 import com.riffforge.feature_cloud_backup.presentation.CloudBackupScreen
 import com.riffforge.feature_contributions.presentation.CommunityScreen
@@ -117,5 +120,20 @@ class CloudBackupToolScreen() : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         CloudBackupScreen(onNavigateUp = { navigator.pop() })
+    }
+}
+
+class AiChordsToolScreen() : Screen {
+    constructor(navigator: Navigator) : this()
+    override val key: ScreenKey = "AiChordsScreen"
+
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+        val viewModel = rememberScreenModel { AiChordsViewModel() }
+        AiChordsScreen(
+            viewModel = viewModel,
+            onNavigateUp = { navigator.pop() }
+        )
     }
 }

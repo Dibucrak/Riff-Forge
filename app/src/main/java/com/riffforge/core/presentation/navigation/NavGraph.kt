@@ -129,7 +129,14 @@ fun NavGraph(
                 onNavigateToProgressions = { navController.navigate(Screen.Progressions.route) },
                 onNavigateToScales = { navController.navigate(Screen.Scales.route) },
                 onNavigateToCommunity = { navController.navigate(Screen.CommunityExplorer.route) },
+                onNavigateToAiChords = { navController.navigate(Screen.AiChords.route) },
                 isDarkTheme = isDarkTheme
+            )
+        }
+
+        composable(route = Screen.AiChords.route) {
+            com.riffforge.feature_ai_chords.presentation.AiChordsScreen(
+                onNavigateUp = { navController.navigateUp() }
             )
         }
 
